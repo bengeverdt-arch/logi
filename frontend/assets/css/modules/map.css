@@ -1,27 +1,20 @@
 /* ============================================================
-   map.css — burn unit map and unit bar
+   map.css — map column, unit bar, Leaflet overrides
    ============================================================ */
 
-#map-wrap {
-  position: relative;
-}
-
 #map {
-  height: 56vh;
-  min-height: 380px;
-  width: 100%;
+  flex: 1;
   background: #0a0a0a;
 }
 
-/* hint overlay */
 #map-hint {
   position: absolute;
-  bottom: 40px;
+  bottom: 48px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(17, 17, 17, 0.88);
+  background: rgba(10, 10, 10, 0.88);
   color: var(--color-text-muted);
-  font-size: 0.73rem;
+  font-size: 0.72rem;
   padding: 5px 14px;
   border: 1px solid var(--color-border);
   pointer-events: none;
@@ -30,51 +23,64 @@
   z-index: 500;
 }
 
-#map-hint.hidden {
-  opacity: 0;
-}
+#map-hint.hidden { opacity: 0; }
 
 /* ---- Unit bar ---- */
 #unit-bar {
   display: none;
   background: var(--color-surface);
   border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
-  padding: 8px 20px;
-  gap: 36px;
+  padding: 7px 16px;
+  gap: 28px;
   align-items: center;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
-#unit-bar.active {
-  display: flex;
-}
+#unit-bar.active { display: flex; }
 
-.unit-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
+.unit-stat { display: flex; flex-direction: column; gap: 1px; }
 
 .unit-label {
-  font-size: 0.58rem;
+  font-size: 0.57rem;
   color: var(--color-text-muted);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .unit-value {
-  font-size: 1.05rem;
+  font-size: 1rem;
   color: var(--color-accent);
   font-weight: bold;
-  letter-spacing: 0.04em;
 }
 
-/* ---- Leaflet dark theme overrides ---- */
-.leaflet-container {
-  font-family: var(--font) !important;
-  background: #111 !important;
+/* ---- Layer toggle ---- */
+#layer-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  display: flex;
+  gap: 4px;
 }
+
+.layer-btn {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-family: var(--font);
+  font-size: 0.65rem;
+  padding: 4px 8px;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.layer-btn:hover  { background: var(--color-surface-2); color: var(--color-text); }
+.layer-btn.active { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
+
+/* ---- Leaflet dark overrides ---- */
+.leaflet-container { font-family: var(--font) !important; }
 
 .leaflet-control-zoom a,
 .leaflet-draw-toolbar a {
@@ -85,7 +91,7 @@
 
 .leaflet-control-zoom a:hover,
 .leaflet-draw-toolbar a:hover {
-  background-color: var(--color-surface-2) !important;
+  background-color: #2a2a2a !important;
 }
 
 .leaflet-bar {
@@ -94,22 +100,16 @@
 }
 
 .leaflet-control-attribution {
-  background: rgba(17, 17, 17, 0.75) !important;
+  background: rgba(10, 10, 10, 0.8) !important;
   color: var(--color-text-muted) !important;
-  font-size: 0.6rem !important;
+  font-size: 0.58rem !important;
 }
 
-.leaflet-control-attribution a {
-  color: var(--color-text-muted) !important;
-}
+.leaflet-control-attribution a { color: var(--color-text-muted) !important; }
 
 .leaflet-draw-tooltip,
 .leaflet-draw-tooltip-subtext {
   background: var(--color-surface) !important;
   border-color: var(--color-border) !important;
   color: var(--color-text) !important;
-}
-
-.leaflet-draw-guide-dash {
-  background: var(--color-accent) !important;
 }

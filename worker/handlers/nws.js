@@ -5,7 +5,7 @@
 
 import { jsonResponse } from '../cors.js';
 
-const UA = 'LOGI-BurnPlanningTool/0.4 (github.com/bengeverdt-arch/logi)';
+const UA = 'LOGI-BurnPlanningTool/0.5 (github.com/bengeverdt-arch/logi)';
 
 export async function handleNWS(request, env, url) {
   const lat = url.searchParams.get('lat');
@@ -26,22 +26,31 @@ async function nwsGet(endpoint) {
   const res = await fetch(endpoint, {
     headers: { 'User-Agent': UA, 'Accept': 'application/geo+json' },
   });
-  if (!res.ok) throw new Error(`NWS API returned ${res.status} for ${endpoint}`);
+  if (!res.ok) throw new Error(`NWS API returned ${res.status}`);
   return res.json();
 }
 
 async function getForecast(lat, lng) {
-  // Step 1: resolve grid point
+  // Step 1: resolve grid point — also gives us location name
   const points = await nwsGet(`https://api.weather.gov/points/${lat},${lng}`);
-  const forecastUrl = points.properties?.forecast;
+  const props  = points.properties ?? {};
+
+  const forecastUrl = props.forecast;
   if (!forecastUrl) throw new Error('Could not resolve NWS grid point for these coordinates.');
+
+  // Build a human-readable location string from relativeLocation
+  const rel      = props.relativeLocation?.properties ?? {};
+  const city     = rel.city  ?? null;
+  const state    = rel.state ?? null;
+  const location = city && state ? `${city}, ${state}` : (state ?? null);
 
   // Step 2: get forecast
   const forecast = await nwsGet(forecastUrl);
   const periods  = forecast.properties?.periods ?? [];
 
   return jsonResponse({
-    office: points.properties?.cwa ?? null,
+    office:   props.cwa ?? null,
+    location,
     periods: periods.slice(0, 6).map(p => ({
       name:              p.name,
       is_daytime:        p.isDaytime,
@@ -56,9 +65,8 @@ async function getForecast(lat, lng) {
 }
 
 async function getAlerts(lat, lng) {
-  const data = await nwsGet(`https://api.weather.gov/alerts/active?point=${lat},${lng}`);
+  const data     = await nwsGet(`https://api.weather.gov/alerts/active?point=${lat},${lng}`);
   const features = data.features ?? [];
-
   return jsonResponse({
     alerts: features.map(f => ({
       event:       f.properties.event,
