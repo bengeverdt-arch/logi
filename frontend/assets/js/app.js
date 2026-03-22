@@ -1,15 +1,26 @@
 // ============================================================
-// app.js — bootstrapper and module loader
-// Initializes modules once the DOM is ready.
+// app.js — bootstrapper, wires modules together
 // ============================================================
 
-import { initMap }       from './modules/map.js';
-import { initWeather }   from './modules/weather.js';
-import { initReceptors } from './modules/receptors.js';
+import { initMap, getReceptorLayer } from './modules/map.js';
+import { initWeather }               from './modules/weather.js';
+import { initReceptors }             from './modules/receptors.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-  initMap();
-  // Weather and receptors are initialized after a burn unit is drawn.
-  // map.js will call initWeather(centroid) and initReceptors(boundary)
-  // once the user completes a polygon.
+  initMap({
+    onUnitDrawn: (unit) => {
+      if (!unit) {
+        resetPanel('weather-panel',   'Draw a burn unit to load weather data.');
+        resetPanel('receptors-panel', 'Draw a burn unit to identify receptors.');
+        return;
+      }
+      initWeather(unit);
+      initReceptors(unit, getReceptorLayer());
+    },
+  });
 });
+
+function resetPanel(id, msg) {
+  const body = document.querySelector(`#${id} .panel-body`);
+  if (body) body.innerHTML = `<p class="panel-empty">${msg}</p>`;
+}

@@ -1,4 +1,127 @@
 /* ============================================================
-   weather.css — RAWS + NWS weather module styles
-   Populated in v0.3.0 / v0.4.0
+   weather.css — RAWS observations + NWS forecast
    ============================================================ */
+
+/* ---- Red Flag / alert banner ---- */
+.alert-banner {
+  background: rgba(230, 184, 0, 0.1);
+  border: 1px solid var(--color-warn);
+  border-left: 3px solid var(--color-warn);
+  padding: 8px 12px;
+  margin-bottom: 14px;
+}
+
+.alert-event {
+  color: var(--color-warn);
+  font-size: 0.78rem;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.alert-headline {
+  font-size: 0.75rem;
+  color: var(--color-text);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+/* ---- RAWS station block ---- */
+.raws-block {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.raws-name {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--color-text);
+}
+
+.raws-meta {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.raws-timestamp {
+  font-size: 0.7rem;
+  margin-top: 6px;
+}
+
+.raws-timestamp.fresh  { color: var(--color-text-muted); }
+.raws-timestamp.stale  { color: var(--color-warn); }
+
+/* ---- Observations grid ---- */
+.obs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.obs-cell {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  padding: 7px 8px;
+}
+
+.obs-label {
+  font-size: 0.58rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.obs-value {
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: var(--color-text);
+  margin-top: 1px;
+}
+
+.obs-value.flagged {
+  color: var(--color-warn);
+}
+
+/* ---- NWS forecast ---- */
+.forecast-section-header {
+  font-size: 0.66rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding-top: 14px;
+  margin-bottom: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.forecast-period {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.forecast-period:last-child {
+  border-bottom: none;
+}
+
+.forecast-period-name {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.forecast-period-line {
+  font-size: 0.8rem;
+  color: var(--color-text);
+  margin-top: 2px;
+}
+
+.forecast-period-detail {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin-top: 3px;
+  line-height: 1.4;
+}

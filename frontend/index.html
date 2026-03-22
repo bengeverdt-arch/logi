@@ -4,22 +4,56 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#111111">
-  <title>LOGI — Land Operations & Groundfire Intelligence</title>
+  <title>LOGI</title>
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
+  <!-- App styles -->
   <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/modules/map.css">
+  <link rel="stylesheet" href="assets/css/modules/weather.css">
+  <link rel="stylesheet" href="assets/css/modules/receptors.css">
 </head>
 <body>
 
   <header>
     <div class="header-inner">
-      <h1>LOGI</h1>
-      <p class="header-sub">Land Operations &amp; Groundfire Intelligence</p>
+      <span class="header-logo">LOGI</span>
+      <span class="header-sub">Land Operations &amp; Groundfire Intelligence</span>
     </div>
   </header>
 
-  <main id="app">
-    <p class="placeholder">Draw a burn unit to begin.</p>
-  </main>
+  <div id="app">
 
+    <div id="map-wrap">
+      <div id="map"></div>
+      <div id="map-hint">Draw a burn unit boundary to begin.</div>
+    </div>
+
+    <div id="unit-bar"></div>
+
+    <div id="panels">
+      <div id="weather-panel" class="panel">
+        <div class="panel-header">Weather</div>
+        <div class="panel-body">
+          <p class="panel-empty">Draw a burn unit to load weather data.</p>
+        </div>
+      </div>
+      <div id="receptors-panel" class="panel">
+        <div class="panel-header">Sensitive Receptors</div>
+        <div class="panel-body">
+          <p class="panel-empty">Draw a burn unit to identify receptors.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Globals loaded before module script -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
   <script type="module" src="assets/js/app.js"></script>
+
 </body>
 </html>

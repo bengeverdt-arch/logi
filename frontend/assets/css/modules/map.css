@@ -1,4 +1,115 @@
 /* ============================================================
-   map.css — burn unit map module styles
-   Populated in v0.2.0
+   map.css — burn unit map and unit bar
    ============================================================ */
+
+#map-wrap {
+  position: relative;
+}
+
+#map {
+  height: 56vh;
+  min-height: 380px;
+  width: 100%;
+  background: #0a0a0a;
+}
+
+/* hint overlay */
+#map-hint {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(17, 17, 17, 0.88);
+  color: var(--color-text-muted);
+  font-size: 0.73rem;
+  padding: 5px 14px;
+  border: 1px solid var(--color-border);
+  pointer-events: none;
+  transition: opacity 0.4s;
+  white-space: nowrap;
+  z-index: 500;
+}
+
+#map-hint.hidden {
+  opacity: 0;
+}
+
+/* ---- Unit bar ---- */
+#unit-bar {
+  display: none;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  padding: 8px 20px;
+  gap: 36px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+#unit-bar.active {
+  display: flex;
+}
+
+.unit-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.unit-label {
+  font-size: 0.58rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.unit-value {
+  font-size: 1.05rem;
+  color: var(--color-accent);
+  font-weight: bold;
+  letter-spacing: 0.04em;
+}
+
+/* ---- Leaflet dark theme overrides ---- */
+.leaflet-container {
+  font-family: var(--font) !important;
+  background: #111 !important;
+}
+
+.leaflet-control-zoom a,
+.leaflet-draw-toolbar a {
+  background-color: var(--color-surface) !important;
+  color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
+}
+
+.leaflet-control-zoom a:hover,
+.leaflet-draw-toolbar a:hover {
+  background-color: var(--color-surface-2) !important;
+}
+
+.leaflet-bar {
+  border: 1px solid var(--color-border) !important;
+  box-shadow: none !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(17, 17, 17, 0.75) !important;
+  color: var(--color-text-muted) !important;
+  font-size: 0.6rem !important;
+}
+
+.leaflet-control-attribution a {
+  color: var(--color-text-muted) !important;
+}
+
+.leaflet-draw-tooltip,
+.leaflet-draw-tooltip-subtext {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
+.leaflet-draw-guide-dash {
+  background: var(--color-accent) !important;
+}

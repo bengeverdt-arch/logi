@@ -1,19 +1,20 @@
 /* ============================================================
-   base.css — global styles, variables, typography
-   LOGI v0.1.0
+   base.css — global styles, variables, layout
    ============================================================ */
 
 :root {
-  --color-bg:        #111111;
-  --color-surface:   #1c1c1c;
-  --color-border:    #2e2e2e;
-  --color-text:      #e8e8e8;
-  --color-text-muted:#888888;
-  --color-accent:    #d4500a;   /* ember orange */
-  --color-warn:      #e6b800;
-  --color-ok:        #4caf50;
-  --font-main: 'Courier New', Courier, monospace;
-  --radius: 4px;
+  --color-bg:          #111111;
+  --color-surface:     #1c1c1c;
+  --color-surface-2:   #242424;
+  --color-border:      #2e2e2e;
+  --color-text:        #e8e8e8;
+  --color-text-muted:  #888888;
+  --color-accent:      #d4500a;
+  --color-warn:        #e6b800;
+  --color-ok:          #4caf50;
+  --color-danger:      #e53935;
+  --font: 'Courier New', Courier, monospace;
+  --header-height: 46px;
 }
 
 *, *::before, *::after {
@@ -26,42 +27,102 @@ html, body {
   height: 100%;
   background: var(--color-bg);
   color: var(--color-text);
-  font-family: var(--font-main);
-  font-size: 14px;
+  font-family: var(--font);
+  font-size: 13px;
   line-height: 1.5;
 }
 
+/* ---- Header ---- */
 header {
+  height: var(--header-height);
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  padding: 12px 20px;
+  border-bottom: 2px solid var(--color-accent);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 .header-inner {
   display: flex;
   align-items: baseline;
-  gap: 16px;
+  gap: 14px;
 }
 
-header h1 {
-  font-size: 1.4rem;
+.header-logo {
+  font-size: 1.3rem;
   font-weight: bold;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.2em;
   color: var(--color-accent);
 }
 
 .header-sub {
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
-main#app {
-  padding: 20px;
+/* ---- Panels grid ---- */
+#panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
 }
 
-.placeholder {
+@media (max-width: 768px) {
+  #panels { grid-template-columns: 1fr; }
+}
+
+/* ---- Generic panel ---- */
+.panel {
+  border-top: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+  min-height: 180px;
+}
+
+.panel:last-child {
+  border-right: none;
+}
+
+.panel-header {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: 7px 16px;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.panel-body {
+  padding: 14px 16px;
+}
+
+.panel-empty {
   color: var(--color-text-muted);
   font-style: italic;
+  font-size: 0.82rem;
+}
+
+.panel-loading {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+.panel-loading::after {
+  content: '...';
+  animation: blink-dots 1.4s steps(4, end) infinite;
+}
+
+@keyframes blink-dots {
+  0%        { content: '.';   }
+  33%       { content: '..';  }
+  66%, 100% { content: '...'; }
+}
+
+.panel-error {
+  color: var(--color-warn);
+  font-size: 0.82rem;
 }
