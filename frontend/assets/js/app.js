@@ -6,9 +6,11 @@ import { initPlan, updateUnitFields } from './modules/plan.js';
 import { initMap, getReceptorLayer }  from './modules/map.js';
 import { initWeather }                from './modules/weather.js';
 import { initReceptors }              from './modules/receptors.js';
+import { initDiag }                   from './modules/diag.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   initPlan();
+  initDiag();
 
   initMap({
     onUnitDrawn: (unit) => {

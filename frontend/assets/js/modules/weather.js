@@ -4,15 +4,16 @@
 
 import { WORKER_URL }   from '../config.js';
 import { updateLocation } from './plan.js';
+import { diagSet } from './diag.js';
 
 export async function initWeather({ lat, lng }) {
   setLoading('conditions-body', 'Fetching RAWS data');
   setLoading('forecast-body',   'Fetching NWS forecast');
 
   const [rawsResult, alertsResult, forecastResult] = await Promise.allSettled([
-    get(`${WORKER_URL}/api/synoptic?lat=${lat}&lng=${lng}`),
-    get(`${WORKER_URL}/api/nws/alerts?lat=${lat}&lng=${lng}`),
-    get(`${WORKER_URL}/api/nws/forecast?lat=${lat}&lng=${lng}`),
+    getWithDiag(`${WORKER_URL}/api/synoptic?lat=${lat}&lng=${lng}`, 'synoptic'),
+    getWithDiag(`${WORKER_URL}/api/nws/alerts?lat=${lat}&lng=${lng}`, 'nws_alerts'),
+    getWithDiag(`${WORKER_URL}/api/nws/forecast?lat=${lat}&lng=${lng}`, 'nws_forecast'),
   ]);
 
   // Pull location from NWS response and populate plan header field
@@ -24,11 +25,18 @@ export async function initWeather({ lat, lng }) {
   renderForecast(alertsResult, forecastResult);
 }
 
-async function get(url) {
-  const res  = await fetch(url);
-  const data = await res.json();
-  if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
-  return data;
+async function getWithDiag(url, key) {
+  let data;
+  try {
+    const res = await fetch(url);
+    data = await res.json();
+    diagSet(key, { url, status: res.status, data });
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  } catch (err) {
+    diagSet(key, { url, error: err.message, data: data ?? null });
+    throw err;
+  }
 }
 
 function setLoading(id, msg) {

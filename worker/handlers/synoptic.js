@@ -22,7 +22,6 @@ export async function handleSynoptic(request, env, url) {
   nearestUrl.searchParams.set('lon',    lng);   // Synoptic uses 'lon'
   nearestUrl.searchParams.set('radius', '120'); // 120 mile search radius
   nearestUrl.searchParams.set('limit',  '5');
-  nearestUrl.searchParams.set('vars',   'fuel_moisture,air_temp,relative_humidity,wind_speed,wind_direction');
   nearestUrl.searchParams.set('units',  'english');
 
   let nearestData;
