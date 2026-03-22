@@ -2,6 +2,55 @@
    map.css — map column, unit bar, Leaflet overrides
    ============================================================ */
 
+/* ---- Search bar ---- */
+#map-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+#search-input {
+  flex: 1;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-family: var(--font);
+  font-size: 0.78rem;
+  padding: 4px 8px;
+  outline: none;
+  min-width: 0;
+}
+
+#search-input:focus { border-color: var(--color-accent); }
+
+#search-input::placeholder { color: var(--color-text-muted); font-style: italic; }
+
+#search-btn {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-family: var(--font);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  padding: 4px 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+#search-btn:hover    { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+#search-btn:disabled { opacity: 0.5; cursor: default; }
+
+#search-status {
+  font-size: 0.68rem;
+  color: var(--color-warn);
+  flex-shrink: 0;
+}
+
 #map {
   flex: 1;
   background: #0a0a0a;

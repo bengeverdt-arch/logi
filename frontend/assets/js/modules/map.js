@@ -1,7 +1,9 @@
 // ============================================================
-// map.js — Leaflet map with ESRI World Imagery + topo toggle
+// map.js — Leaflet map with ESRI World Imagery + overlays + search
 // Leaflet, Leaflet.draw, Turf loaded as globals via CDN
 // ============================================================
+
+import { WORKER_URL } from '../config.js';
 
 let map, drawnItems, receptorLayer;
 let _onUnitDrawn;
@@ -9,6 +11,12 @@ let _onUnitDrawn;
 const IMAGERY_LAYER = L.tileLayer(
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   { attribution: 'Imagery &copy; <a href="https://www.esri.com">Esri</a>, Maxar, Earthstar Geographics', maxZoom: 19 }
+);
+
+// Roads, city names, and boundaries — designed to overlay on World Imagery
+const LABELS_OVERLAY = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+  { attribution: 'Labels &copy; Esri', maxZoom: 19, pane: 'shadowPane' }
 );
 
 const TOPO_OVERLAY = L.tileLayer(
@@ -44,6 +52,7 @@ export function initMap({ onUnitDrawn }) {
 
   map.addControl(drawControl);
   buildLayerToggle();
+  buildSearch();
 
   map.on(L.Draw.Event.CREATED, (e) => {
     drawnItems.clearLayers();
@@ -101,18 +110,31 @@ function hideMapHint() {
   document.getElementById('map-hint')?.classList.add('hidden');
 }
 
-let topoActive = false;
+let topoActive   = false;
+let labelsActive = false;
 
 function buildLayerToggle() {
   const div = L.DomUtil.create('div', '');
   div.id = 'layer-toggle';
   div.innerHTML = `
     <button class="layer-btn active" id="btn-imagery">Imagery</button>
+    <button class="layer-btn" id="btn-labels">+ Labels</button>
     <button class="layer-btn" id="btn-topo">+ Topo</button>
   `;
   document.getElementById('map').appendChild(div);
 
   L.DomEvent.disableClickPropagation(div);
+
+  document.getElementById('btn-labels').addEventListener('click', () => {
+    labelsActive = !labelsActive;
+    if (labelsActive) {
+      LABELS_OVERLAY.addTo(map);
+      document.getElementById('btn-labels').classList.add('active');
+    } else {
+      map.removeLayer(LABELS_OVERLAY);
+      document.getElementById('btn-labels').classList.remove('active');
+    }
+  });
 
   document.getElementById('btn-topo').addEventListener('click', () => {
     topoActive = !topoActive;
@@ -124,4 +146,46 @@ function buildLayerToggle() {
       document.getElementById('btn-topo').classList.remove('active');
     }
   });
+}
+
+function buildSearch() {
+  const input  = document.getElementById('search-input');
+  const btn    = document.getElementById('search-btn');
+  const status = document.getElementById('search-status');
+  if (!input || !btn) return;
+
+  async function doSearch() {
+    const q = input.value.trim();
+    if (!q) return;
+
+    // Accept raw lat,lng input — skip geocoder
+    const coordMatch = q.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
+    if (coordMatch) {
+      const lat = parseFloat(coordMatch[1]);
+      const lng = parseFloat(coordMatch[2]);
+      map.setView([lat, lng], 13);
+      status.textContent = '';
+      return;
+    }
+
+    btn.textContent    = '...';
+    btn.disabled       = true;
+    status.textContent = '';
+
+    try {
+      const res  = await fetch(`${WORKER_URL}/api/geocode?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+      map.setView([data.lat, data.lng], 13);
+      status.textContent = '';
+    } catch (err) {
+      status.textContent = err.message || 'Not found.';
+    } finally {
+      btn.textContent  = 'GO';
+      btn.disabled     = false;
+    }
+  }
+
+  btn.addEventListener('click', doSearch);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
 }

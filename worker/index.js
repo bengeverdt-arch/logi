@@ -3,6 +3,7 @@ import { handleSynoptic }    from './handlers/synoptic.js';
 import { handleNWS }         from './handlers/nws.js';
 import { handleOSM }         from './handlers/osm.js';
 import { handleLandStatus }  from './handlers/landstatus.js';
+import { handleGeocode }     from './handlers/geocode.js';
 
 export default {
   async fetch(request, env) {
@@ -18,6 +19,7 @@ export default {
       if (pathname.startsWith('/api/nws'))         return handleNWS(request, env, url);
       if (pathname.startsWith('/api/osm'))         return handleOSM(request, env, url);
       if (pathname.startsWith('/api/landstatus'))  return handleLandStatus(request, env, url);
+      if (pathname.startsWith('/api/geocode'))     return handleGeocode(request, env, url);
 
       return jsonResponse({ error: 'Not found.' }, 404);
 
