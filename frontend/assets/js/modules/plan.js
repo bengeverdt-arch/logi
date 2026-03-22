@@ -181,17 +181,6 @@ export function initPlan() {
       </div>
     </section>
 
-    <!-- DIAGNOSTICS (no-print) -->
-    <section class="plan-section no-print" id="section-diag">
-      <div class="plan-section-header">
-        <span class="plan-section-title">Diagnostics</span>
-        <button id="diag-copy" class="diag-copy-btn">Copy</button>
-      </div>
-      <div class="plan-section-body">
-        <textarea id="diag-output" class="diag-output" readonly placeholder="Draw a burn unit to populate diagnostics."></textarea>
-      </div>
-    </section>
-
   `;
 
   document.getElementById('btn-print').addEventListener('click', () => window.print());

@@ -4,7 +4,7 @@
 // ============================================================
 
 import { WORKER_URL } from '../config.js';
-import { diagSet } from './diag.js';
+import { DIAG } from './diag.js';
 
 const TYPE_LABEL = {
   school: 'School', medical: 'Medical', care_facility: 'Care Facility',
@@ -26,10 +26,13 @@ export async function initReceptors({ lat, lng }, receptorLayer) {
   try {
     const res = await fetch(url);
     data = await res.json();
-    diagSet('osm_receptors', { url, status: res.status, data });
-    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    if (!res.ok || data.error) {
+      DIAG.err('OSM', data.error || `HTTP ${res.status}`, url);
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    DIAG.ok('OSM', `${data.receptors?.length ?? 0} receptors found`);
   } catch (err) {
-    diagSet('osm_receptors', { url, error: err.message, data: data ?? null });
+    if (!data) DIAG.err('OSM', err.message, url);
     if (el) el.innerHTML = `<p class="plan-error">Receptor scan failed: ${err.message}</p>`;
     return;
   }

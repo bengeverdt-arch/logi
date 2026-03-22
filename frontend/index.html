@@ -18,8 +18,26 @@
       <span class="header-logo">LOGI</span>
       <span class="header-sub">Land Operations &amp; Groundfire Intelligence</span>
       <span id="header-status" class="header-status"></span>
+      <button id="btn-diag" class="btn-diag">DIAG</button>
     </div>
   </header>
+
+  <!-- Diagnostics floating panel -->
+  <div id="diag-panel" class="diag-panel hidden">
+    <div class="diag-box">
+      <div class="diag-head">
+        <span class="diag-title">LOGI &mdash; DIAGNOSTICS</span>
+        <button id="diag-close" class="diag-close">CLOSE</button>
+      </div>
+      <div class="diag-body">
+        <div id="diag-summary" class="diag-summary"></div>
+        <pre id="diag-log" class="diag-log">No data yet — draw a burn unit.</pre>
+        <div class="diag-actions">
+          <button id="diag-copy" class="diag-action diag-action-copy">COPY LOG</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="app">
 

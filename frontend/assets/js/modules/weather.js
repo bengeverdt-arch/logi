@@ -2,21 +2,20 @@
 // weather.js — RAWS conditions + NWS forecast → plan sections
 // ============================================================
 
-import { WORKER_URL }   from '../config.js';
+import { WORKER_URL }    from '../config.js';
 import { updateLocation } from './plan.js';
-import { diagSet } from './diag.js';
+import { DIAG }           from './diag.js';
 
 export async function initWeather({ lat, lng }) {
   setLoading('conditions-body', 'Fetching RAWS data');
   setLoading('forecast-body',   'Fetching NWS forecast');
 
   const [rawsResult, alertsResult, forecastResult] = await Promise.allSettled([
-    getWithDiag(`${WORKER_URL}/api/synoptic?lat=${lat}&lng=${lng}`, 'synoptic'),
-    getWithDiag(`${WORKER_URL}/api/nws/alerts?lat=${lat}&lng=${lng}`, 'nws_alerts'),
-    getWithDiag(`${WORKER_URL}/api/nws/forecast?lat=${lat}&lng=${lng}`, 'nws_forecast'),
+    diagFetch(`${WORKER_URL}/api/synoptic?lat=${lat}&lng=${lng}`, 'SYNOPTIC'),
+    diagFetch(`${WORKER_URL}/api/nws/alerts?lat=${lat}&lng=${lng}`, 'NWS-ALERTS'),
+    diagFetch(`${WORKER_URL}/api/nws/forecast?lat=${lat}&lng=${lng}`, 'NWS-FCST'),
   ]);
 
-  // Pull location from NWS response and populate plan header field
   if (forecastResult.status === 'fulfilled' && forecastResult.value?.location) {
     updateLocation(forecastResult.value.location);
   }
@@ -25,16 +24,19 @@ export async function initWeather({ lat, lng }) {
   renderForecast(alertsResult, forecastResult);
 }
 
-async function getWithDiag(url, key) {
+async function diagFetch(url, src) {
   let data;
   try {
     const res = await fetch(url);
     data = await res.json();
-    diagSet(key, { url, status: res.status, data });
-    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    if (!res.ok || data.error) {
+      DIAG.err(src, data.error || `HTTP ${res.status}`, url);
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    DIAG.ok(src, 'OK', JSON.stringify(data).substring(0, 200));
     return data;
   } catch (err) {
-    diagSet(key, { url, error: err.message, data: data ?? null });
+    if (!data) DIAG.err(src, err.message, url);
     throw err;
   }
 }
@@ -54,8 +56,7 @@ function renderConditions(result) {
     return;
   }
 
-  const { station, observations } = result.value;
-  const latest = getLatestObs(observations);
+  const { station, latest } = result.value;
 
   const obsDate  = latest.date_time ? new Date(latest.date_time) : null;
   const ageHours = obsDate ? (Date.now() - obsDate.getTime()) / 3_600_000 : null;
@@ -88,26 +89,6 @@ function cell(label, value, flagged) {
   </div>`;
 }
 
-function getLatestObs(obs) {
-  const last = (key) => {
-    const arr = obs[key];
-    if (!Array.isArray(arr)) return null;
-    for (let i = arr.length - 1; i >= 0; i--) {
-      if (arr[i] !== null && arr[i] !== undefined) return arr[i];
-    }
-    return null;
-  };
-  const times = obs.date_time || [];
-  return {
-    date_time:         times[times.length - 1] || null,
-    fuel_moisture:     last('fuel_moisture_set_1') ?? last('fuel_moisture_set_1d'),
-    air_temp:          last('air_temp_set_1'),
-    relative_humidity: last('relative_humidity_set_1'),
-    wind_speed:        last('wind_speed_set_1'),
-    wind_direction:    last('wind_direction_set_1'),
-  };
-}
-
 function deg2card(deg) {
   const d = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   return d[Math.round(deg / 22.5) % 16];
@@ -120,7 +101,6 @@ function renderForecast(alertsResult, forecastResult) {
 
   el.innerHTML = '';
 
-  // Active alerts first
   if (alertsResult.status === 'fulfilled') {
     const redFlag = (alertsResult.value.alerts || [])
       .filter(a => /red flag|fire weather/i.test(a.event || ''));

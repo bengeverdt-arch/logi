@@ -65,7 +65,6 @@ header {
 }
 
 .header-status {
-  margin-left: auto;
   font-size: 0.67rem;
   color: var(--color-text-muted);
 }
@@ -128,8 +127,136 @@ header {
   }
 }
 
+/* ---- DIAG button (header) ---- */
+.btn-diag {
+  margin-left: auto;
+  font-family: var(--font);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.btn-diag:hover { color: var(--color-warn); border-color: var(--color-warn); }
+
+/* ---- Diagnostics floating panel ---- */
+.diag-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.diag-panel.hidden { display: none; }
+
+.diag-box {
+  background: var(--color-surface);
+  border: 1px solid var(--color-warn);
+  width: 100%;
+  max-width: 860px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.diag-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(230, 184, 0, 0.06);
+  border-bottom: 1px solid rgba(230, 184, 0, 0.18);
+}
+
+.diag-title {
+  font-size: 0.75rem;
+  font-weight: bold;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-warn);
+}
+
+.diag-close {
+  font-family: var(--font);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  padding: 4px 12px;
+  cursor: pointer;
+}
+.diag-close:hover { color: var(--color-danger); border-color: var(--color-danger); }
+
+.diag-body {
+  padding: 14px 16px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.diag-summary {
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  line-height: 1.7;
+  padding: 8px 12px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+}
+.diag-summary strong { color: var(--color-text); }
+.diag-muted { color: var(--color-text-muted); opacity: 0.6; }
+
+.diag-log {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  padding: 10px 12px;
+  font-family: var(--font);
+  font-size: 0.68rem;
+  line-height: 1.7;
+  overflow-x: auto;
+  white-space: pre;
+  max-height: 380px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.diag-actions { display: flex; gap: 8px; }
+
+.diag-action {
+  font-family: var(--font);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  padding: 5px 14px;
+  cursor: pointer;
+  border: 1px solid;
+  background: transparent;
+  text-transform: uppercase;
+}
+
+.diag-action-copy {
+  color: var(--color-ok);
+  border-color: rgba(76, 175, 80, 0.3);
+}
+.diag-action-copy:hover { background: rgba(76, 175, 80, 0.1); }
+
+.diag-ok   { color: var(--color-ok); }
+.diag-err  { color: var(--color-danger); }
+.diag-warn { color: var(--color-warn); }
+.diag-info { color: var(--color-text-muted); }
+
 /* ---- Print ---- */
 @media print {
+  .diag-panel { display: none !important; }
   header, #map-column, #plan-footer { display: none !important; }
   #app { display: block; height: auto; overflow: visible; }
   #plan-column { overflow: visible; }
