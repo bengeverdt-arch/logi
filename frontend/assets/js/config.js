@@ -4,4 +4,4 @@
 // It will look like: https://logi-worker.<your-subdomain>.workers.dev
 // ============================================================
 
-export const WORKER_URL = '';
+export const WORKER_URL = 'https://logi-worker.bengeverdt.workers.dev';
