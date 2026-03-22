@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Wrangler local state
+.wrangler/
+
+# Old reference code
+Old Code/
+
+# Misc
+*.zip
+.DS_Store

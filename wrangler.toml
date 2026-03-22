@@ -1,0 +1,6 @@
+name               = "logi-worker"
+main               = "worker/index.js"
+compatibility_date = "2024-09-23"
+
+# SYNOPTIC_TOKEN is stored as a Worker secret — never put it here.
+# To set it: wrangler secret put SYNOPTIC_TOKEN
