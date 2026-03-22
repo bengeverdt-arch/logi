@@ -6,6 +6,7 @@ import { initPlan, updateUnitFields } from './modules/plan.js';
 import { initMap, getReceptorLayer }  from './modules/map.js';
 import { initWeather }                from './modules/weather.js';
 import { initReceptors }              from './modules/receptors.js';
+import { initLandStatus }             from './modules/landstatus.js';
 import { initDiag }                   from './modules/diag.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -16,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     onUnitDrawn: (unit) => {
       if (!unit) {
         // Unit deleted — reset data sections
-        ['conditions-body', 'forecast-body', 'receptors-body'].forEach(id => {
+        ['landstatus-body', 'conditions-body', 'forecast-body', 'receptors-body'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.innerHTML = '<p class="plan-pending">Draw a burn unit to load.</p>';
         });
@@ -27,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       updateUnitFields(unit);
+      initLandStatus(unit);
       initWeather(unit);
       initReceptors(unit, getReceptorLayer());
     },

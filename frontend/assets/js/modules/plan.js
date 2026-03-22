@@ -43,6 +43,17 @@ export function initPlan() {
       </div>
     </section>
 
+    <!-- LAND STATUS -->
+    <section class="plan-section" id="section-landstatus">
+      <div class="plan-section-header">
+        <span class="plan-section-title">Land Status</span>
+        <span class="plan-section-source">Auto &mdash; Esri Federal Lands</span>
+      </div>
+      <div class="plan-section-body" id="landstatus-body">
+        <p class="plan-pending">Draw a burn unit to load.</p>
+      </div>
+    </section>
+
     <!-- PRESCRIPTION WINDOW -->
     <section class="plan-section" id="section-prescription">
       <div class="plan-section-header">
