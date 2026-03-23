@@ -6,6 +6,9 @@ import { WORKER_URL }    from '../config.js';
 import { updateLocation } from './plan.js';
 import { DIAG }           from './diag.js';
 
+let _latestRaws = null;
+export function getLatestRaws() { return _latestRaws; }
+
 export async function initWeather({ lat, lng }) {
   setLoading('conditions-body', 'Fetching RAWS data');
   setLoading('forecast-body',   'Fetching NWS forecast');
@@ -18,6 +21,13 @@ export async function initWeather({ lat, lng }) {
 
   if (forecastResult.status === 'fulfilled' && forecastResult.value?.location) {
     updateLocation(forecastResult.value.location);
+  }
+
+  if (rawsResult.status === 'fulfilled') {
+    _latestRaws = rawsResult.value.latest ?? null;
+    document.dispatchEvent(new Event('raws:loaded'));
+  } else {
+    _latestRaws = null;
   }
 
   renderConditions(rawsResult);

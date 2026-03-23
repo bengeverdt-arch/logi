@@ -7,11 +7,13 @@ import { initMap, getReceptorLayer, getWaterLayer } from './modules/map.js';
 import { initWeather }                from './modules/weather.js';
 import { initReceptors }              from './modules/receptors.js';
 import { initWaterSources }           from './modules/watersources.js';
+import { initGoNoGo, runGoNoGo }      from './modules/gonogo.js';
 import { initLandStatus }             from './modules/landstatus.js';
 import { initDiag }                   from './modules/diag.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   initPlan();
+  initGoNoGo();
   initDiag();
 
   initMap({
@@ -22,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const el = document.getElementById(id);
           if (el) el.innerHTML = '<p class="plan-pending">Draw a burn unit to load.</p>';
         });
+        runGoNoGo();
         const fWater = document.getElementById('f-water');
         if (fWater) fWater.innerHTML = '<p class="plan-pending">Draw a burn unit to load.</p>';
         document.getElementById('f-acres')?.classList.add('pending');

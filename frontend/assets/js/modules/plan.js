@@ -125,6 +125,17 @@ export function initPlan() {
       </div>
     </section>
 
+    <!-- GO / NO-GO -->
+    <section class="plan-section" id="section-gonogo">
+      <div class="plan-section-header">
+        <span class="plan-section-title">Go / No-Go</span>
+        <span class="plan-section-source">Auto &mdash; Rx vs. Live Conditions</span>
+      </div>
+      <div class="plan-section-body" id="gonogo-body">
+        <p class="plan-pending">Set prescription values and draw a burn unit to enable.</p>
+      </div>
+    </section>
+
     <!-- CURRENT CONDITIONS -->
     <section class="plan-section" id="section-conditions">
       <div class="plan-section-header">

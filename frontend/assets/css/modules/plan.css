@@ -289,6 +289,62 @@
   font-style: italic;
 }
 
+/* ---- Go / No-Go ---- */
+.gonogo-overall {
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 0.78rem;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-left: 3px solid;
+}
+.overall-go   { background: rgba(76,175,80,0.1);  color: var(--color-ok);          border-color: var(--color-ok); }
+.overall-nogo { background: rgba(211,47,47,0.1);  color: var(--color-danger);       border-color: var(--color-danger); }
+.overall-na   { background: var(--color-surface-2); color: var(--color-text-muted); border-color: var(--color-border); font-weight: normal; }
+
+.gonogo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+.gonogo-table th {
+  text-align: left;
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--color-border);
+}
+.gonogo-table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+.gonogo-table tr:last-child td { border-bottom: none; }
+
+.gonogo-param { color: var(--color-text-muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+.gonogo-live  { color: var(--color-text); font-weight: bold; }
+.gonogo-rx    { color: var(--color-text-muted); }
+.gonogo-na    { color: var(--color-text-muted); opacity: 0.5; }
+
+.gonogo-badge {
+  font-size: 0.57rem;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1px solid;
+  white-space: nowrap;
+  display: inline-block;
+}
+.gonogo-badge.go     { color: var(--color-ok);          border-color: var(--color-ok);     background: rgba(76,175,80,0.1); }
+.gonogo-badge.nogo   { color: var(--color-danger);       border-color: var(--color-danger); background: rgba(211,47,47,0.1); }
+.gonogo-badge.manual { color: var(--color-warn);         border-color: var(--color-warn);   background: rgba(230,184,0,0.06); }
+.gonogo-badge.nodata { color: var(--color-text-muted);   border-color: var(--color-border); }
+.gonogo-badge.na     { color: var(--color-text-muted);   border-color: transparent; }
+
 /* ---- Print button ---- */
 .btn-print {
   background: var(--color-accent);
@@ -335,4 +391,16 @@
   .forecast-period-name { color: #c8460a; }
   .forecast-period-line { color: #000; }
   .forecast-period-detail { color: #555; }
+  .gonogo-overall.overall-go   { background: #e8f5e9; color: #2e7d32; border-color: #2e7d32; }
+  .gonogo-overall.overall-nogo { background: #ffebee; color: #c62828; border-color: #c62828; }
+  .gonogo-overall.overall-na   { background: #f5f5f5; color: #666;    border-color: #aaa; }
+  .gonogo-table th { color: #666; border-color: #ccc; }
+  .gonogo-table td { border-color: #ccc; }
+  .gonogo-param { color: #555; }
+  .gonogo-live  { color: #000; }
+  .gonogo-rx    { color: #555; }
+  .gonogo-badge.go     { color: #2e7d32; border-color: #2e7d32; background: #e8f5e9; }
+  .gonogo-badge.nogo   { color: #c62828; border-color: #c62828; background: #ffebee; }
+  .gonogo-badge.manual { color: #8a6200; border-color: #8a6200; background: transparent; }
+  .gonogo-badge.nodata { color: #777;    border-color: #ccc;    background: transparent; }
 }
