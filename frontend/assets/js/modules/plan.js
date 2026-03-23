@@ -201,6 +201,35 @@ export function initPlan() {
       </div>
     </section>
 
+    <!-- MONITORING (El. 20) -->
+    <section class="plan-section" id="section-monitoring">
+      <div class="plan-section-header">
+        <span class="plan-section-title">Monitoring</span>
+        <span class="plan-section-source">El. 20 &mdash; PMS 484-1</span>
+      </div>
+      <div class="plan-section-body">
+        <div class="plan-fields">
+          <span class="field-label">Pre-burn FM Check</span>
+          <input class="field-input" type="text" placeholder="Date + 10-hr / 100-hr FM readings (e.g. 03/23 — 10hr: 12%, 100hr: 18%)">
+
+          <span class="field-label">Weather Obs Interval</span>
+          <input class="field-input" type="text" placeholder="e.g. Every 30 min during ignition, hourly thereafter">
+
+          <span class="field-label">Lookout Assignments</span>
+          <input class="field-input" type="text" placeholder="Name / position / location">
+
+          <span class="field-label">Fire Behavior Monitoring</span>
+          <textarea class="field-textarea" placeholder="Rate of spread, flame length, spotting — who monitors and how often..."></textarea>
+
+          <span class="field-label">Smoke Monitoring</span>
+          <textarea class="field-textarea" placeholder="Smoke dispersal, visibility impacts, receptor check-ins, air quality contacts..."></textarea>
+
+          <span class="field-label">Post-ignition Patrol</span>
+          <textarea class="field-textarea" placeholder="Perimeter patrol schedule, black line verification requirements..."></textarea>
+        </div>
+      </div>
+    </section>
+
     <!-- SAFETY (El. 13) -->
     <section class="plan-section" id="section-safety">
       <div class="plan-section-header">
@@ -366,6 +395,130 @@ export function initPlan() {
 
           <span class="field-label">Notifications</span>
           <textarea class="field-textarea" placeholder="Dispatch, agency administrator, state forester, adjacent landowners..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- GO / NO-GO CHECKLIST (El. 2B) -->
+    <section class="plan-section" id="section-gng-checklist">
+      <div class="plan-section-header">
+        <span class="plan-section-title">Pre-ignition Go / No-Go Checklist</span>
+        <span class="plan-section-source">El. 2B &mdash; PMS 484-1</span>
+      </div>
+      <div class="plan-section-body">
+        <div class="checklist">
+          ${[
+            'Burn unit has been prepared per the burn plan',
+            'All required notifications completed — dispatch, agency, adjacent landowners',
+            'Current weather is within prescription on all parameters',
+            'Minimum required staffing is on site and accounted for',
+            'All personnel have been briefed',
+            'Communications check completed — all radios operational on designated frequencies',
+            'Escape routes and safety zones identified and communicated to all personnel',
+            'Test fire conducted with acceptable fire behavior results',
+            'Smoke management requirements satisfied — clearance obtained if required',
+            'Contingency resources identified and available if needed',
+            'All required permits and authorizations are current and on file',
+            'Burn Boss authorizes ignition',
+          ].map((item, i) => `
+          <div class="checklist-item">
+            <div class="check-yn">
+              <label class="check-yn-label yes"><input type="radio" name="gng-${i}" value="yes"><span>YES</span></label>
+              <label class="check-yn-label no"><input type="radio" name="gng-${i}" value="no"><span>NO</span></label>
+            </div>
+            <span class="check-text">${item}</span>
+          </div>`).join('')}
+        </div>
+        <div class="plan-fields" style="margin-top:14px">
+          <span class="field-label">Burn Boss</span>
+          <input class="field-input" type="text" placeholder="Name / signature">
+          <span class="field-label">Date / Time</span>
+          <input class="field-input" type="text" placeholder="MM/DD/YYYY — HH:MM">
+        </div>
+      </div>
+    </section>
+
+    <!-- BRIEFING CHECKLIST (El. 10) -->
+    <section class="plan-section" id="section-briefing">
+      <div class="plan-section-header">
+        <span class="plan-section-title">Briefing Checklist</span>
+        <span class="plan-section-source">El. 10 &mdash; PMS 484-1</span>
+      </div>
+      <div class="plan-section-body">
+        <div class="checklist">
+          ${[
+            'Personnel assignments and organization reviewed',
+            'Burn objectives and priorities communicated',
+            'Burn unit boundaries and map orientation covered',
+            'Current weather conditions and forecast reviewed',
+            'Prescription window parameters reviewed — Go/No-Go status confirmed',
+            'Test fire plan and location identified',
+            'Ignition sequence and crew assignments reviewed',
+            'Communications — frequencies, call signs, check-in schedule confirmed',
+            'Safety — hazards, mitigation measures, medical plan covered',
+            'Escape routes and safety zones shown on map — all personnel acknowledge',
+            'Holding assignments and procedures reviewed',
+            'Contingency plan and wildfire declaration criteria reviewed',
+          ].map((item, i) => `
+          <div class="checklist-item">
+            <label class="check-cb">
+              <input type="checkbox" id="brief-${i}">
+              <span class="check-text">${item}</span>
+            </label>
+          </div>`).join('')}
+        </div>
+        <div class="plan-fields" style="margin-top:14px">
+          <span class="field-label">Briefing Officer</span>
+          <input class="field-input" type="text" placeholder="Name / position">
+          <span class="field-label">Date / Time</span>
+          <input class="field-input" type="text" placeholder="MM/DD/YYYY — HH:MM">
+          <span class="field-label">Notes</span>
+          <textarea class="field-textarea" placeholder="Deviations from standard briefing, special crew instructions..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- TEST FIRE DOCUMENTATION (El. 14) -->
+    <section class="plan-section" id="section-testfire">
+      <div class="plan-section-header">
+        <span class="plan-section-title">Test Fire Documentation</span>
+        <span class="plan-section-source">El. 14 &mdash; PMS 484-1</span>
+      </div>
+      <div class="plan-section-body">
+        <div class="plan-fields">
+          <span class="field-label">Location</span>
+          <input class="field-input" type="text" placeholder="Describe test fire location within or adjacent to unit">
+
+          <span class="field-label">Time Conducted</span>
+          <input class="field-input" type="text" placeholder="HH:MM">
+
+          <span class="field-label">Temp at Test Fire</span>
+          <input class="field-input" type="text" placeholder="°F">
+
+          <span class="field-label">RH at Test Fire</span>
+          <input class="field-input" type="text" placeholder="%">
+
+          <span class="field-label">Wind Speed / Dir</span>
+          <input class="field-input" type="text" placeholder="mph / cardinal direction">
+
+          <span class="field-label">10-hr FM at Test</span>
+          <input class="field-input" type="text" placeholder="%">
+
+          <span class="field-label">Fire Behavior Observed</span>
+          <textarea class="field-textarea" placeholder="Rate of spread, flame length, torching, spotting, smoke column..."></textarea>
+
+          <span class="field-label">Disposition</span>
+          <div style="display:flex;gap:16px;align-items:center;font-size:0.82rem">
+            <label class="check-cb"><input type="radio" name="tf-disp" value="proceed"><span class="check-text">Proceed</span></label>
+            <label class="check-cb"><input type="radio" name="tf-disp" value="delay"><span class="check-text">Delay</span></label>
+            <label class="check-cb"><input type="radio" name="tf-disp" value="abort"><span class="check-text">Abort</span></label>
+          </div>
+
+          <span class="field-label">Notes</span>
+          <textarea class="field-textarea" placeholder="Any deviations, concerns, or notable observations..."></textarea>
+
+          <span class="field-label">RXB Initials / Date</span>
+          <input class="field-input" type="text" placeholder="Initials — MM/DD/YYYY">
         </div>
       </div>
     </section>
