@@ -54,6 +54,49 @@ export function initPlan() {
       </div>
     </section>
 
+    <!-- OBJECTIVES (El. 5) -->
+    <section class="plan-section" id="section-objectives">
+      <div class="plan-section-header">
+        <span class="plan-section-title">Objectives</span>
+        <span class="plan-section-source">El. 5 &mdash; PMS 484-1</span>
+      </div>
+      <div class="plan-section-body">
+        <div class="plan-fields">
+          <span class="field-label">Resource Objectives</span>
+          <textarea class="field-textarea" placeholder="Reduce fuel loading, improve forage, restore fire-adapted community..."></textarea>
+
+          <span class="field-label">Prescribed Fire Objectives</span>
+          <textarea class="field-textarea" placeholder="Achieve black on 80% of unit, consume activity fuels in slash areas..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCHEDULING (El. 8) -->
+    <section class="plan-section" id="section-scheduling">
+      <div class="plan-section-header">
+        <span class="plan-section-title">Scheduling</span>
+        <span class="plan-section-source">El. 8 &mdash; PMS 484-1</span>
+      </div>
+      <div class="plan-section-body">
+        <div class="plan-fields">
+          <span class="field-label">Planned Ignition Date</span>
+          <input class="field-input" type="date" id="f-ignition-date">
+
+          <span class="field-label">Ignition Window</span>
+          <input class="field-input" type="text" placeholder="e.g. 1000&ndash;1400">
+
+          <span class="field-label">Projected Duration</span>
+          <input class="field-input" type="text" placeholder="e.g. 1 day, 2 operational periods">
+
+          <span class="field-label">Plan Expiration</span>
+          <input class="field-input" type="date" id="f-plan-expiry">
+
+          <span class="field-label">Constraints / Notes</span>
+          <textarea class="field-textarea" placeholder="Seasonal restrictions, permit windows, adjoining operations..."></textarea>
+        </div>
+      </div>
+    </section>
+
     <!-- PRESCRIPTION WINDOW -->
     <section class="plan-section" id="section-prescription">
       <div class="plan-section-header">
@@ -158,6 +201,61 @@ export function initPlan() {
       </div>
     </section>
 
+    <!-- SAFETY (El. 13) -->
+    <section class="plan-section" id="section-safety">
+      <div class="plan-section-header">
+        <span class="plan-section-title">Safety</span>
+        <span class="plan-section-source">El. 13 &mdash; PMS 484-1</span>
+      </div>
+      <div class="plan-section-body">
+        <div class="plan-fields">
+          <span class="field-label">Hazards</span>
+          <textarea class="field-textarea" placeholder="Snags, steep terrain, barbed wire, roads, aerial hazards..."></textarea>
+
+          <span class="field-label">Mitigation</span>
+          <textarea class="field-textarea" placeholder="Pre-burn hazard removal, flagging, standby requirements..."></textarea>
+
+          <span class="field-label">Emergency Evac Route</span>
+          <textarea class="field-textarea" placeholder="Primary and secondary evacuation routes for personnel..."></textarea>
+
+          <span class="field-label">Safety Zone(s)</span>
+          <textarea class="field-textarea" placeholder="Location and size of designated safety zones..."></textarea>
+
+          <span class="field-label">Nearest Hospital</span>
+          <input class="field-input" type="text" placeholder="Name, address, distance from unit">
+
+          <span class="field-label">Emergency Contacts</span>
+          <textarea class="field-textarea" placeholder="911, poison control, agency safety officer, aviation if applicable..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMMUNICATIONS (El. 12) -->
+    <section class="plan-section" id="section-comms">
+      <div class="plan-section-header">
+        <span class="plan-section-title">Communications</span>
+        <span class="plan-section-source">El. 12 &mdash; PMS 484-1</span>
+      </div>
+      <div class="plan-section-body">
+        <div class="plan-fields">
+          <span class="field-label">Primary Frequency</span>
+          <input class="field-input" type="text" placeholder="Channel / frequency (MHz)">
+
+          <span class="field-label">Secondary Frequency</span>
+          <input class="field-input" type="text" placeholder="Channel / frequency (MHz)">
+
+          <span class="field-label">Dispatch</span>
+          <input class="field-input" type="text" placeholder="Dispatch center name and phone">
+
+          <span class="field-label">Agency Contacts</span>
+          <textarea class="field-textarea" placeholder="Unit forester, district FMO, agency administrator..."></textarea>
+
+          <span class="field-label">Landowner Notifications</span>
+          <textarea class="field-textarea" placeholder="Adjacent landowners, roads dept., local law enforcement..."></textarea>
+        </div>
+      </div>
+    </section>
+
     <!-- SENSITIVE RECEPTORS -->
     <section class="plan-section" id="section-receptors">
       <div class="plan-section-header">
@@ -198,7 +296,102 @@ export function initPlan() {
           <textarea class="field-textarea" placeholder="Adjacent landowners, agency contacts, dispatch..."></textarea>
 
           <span class="field-label">Additional Notes</span>
-          <textarea class="field-textarea" placeholder="Objectives, special considerations..."></textarea>
+          <textarea class="field-textarea" placeholder="Special considerations, pre-burn checklist items..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- IGNITION PLAN (El. 15) -->
+    <section class="plan-section" id="section-ignition">
+      <div class="plan-section-header">
+        <span class="plan-section-title">Ignition Plan</span>
+        <span class="plan-section-source">El. 15 &mdash; PMS 484-1</span>
+      </div>
+      <div class="plan-section-body">
+        <div class="plan-fields">
+          <span class="field-label">Firing Method</span>
+          <input class="field-input" type="text" placeholder="e.g. Strip headfire, backing fire, flanking fire">
+
+          <span class="field-label">Ignition Devices</span>
+          <input class="field-input" type="text" placeholder="e.g. Drip torches, aerial ignition, fusees">
+
+          <span class="field-label">Min. Staffing to Ignite</span>
+          <input class="field-input" type="text" placeholder="e.g. 1 RXB + 4 crew + 1 engine">
+
+          <span class="field-label">Test Fire Location</span>
+          <input class="field-input" type="text" placeholder="Location of planned test fire within or near unit">
+
+          <span class="field-label">Ignition Sequence</span>
+          <textarea class="field-textarea" placeholder="Describe ignition sequence, starting point, pattern, timing..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOLDING PLAN (El. 16) -->
+    <section class="plan-section" id="section-holding">
+      <div class="plan-section-header">
+        <span class="plan-section-title">Holding Plan</span>
+        <span class="plan-section-source">El. 16 &mdash; PMS 484-1</span>
+      </div>
+      <div class="plan-section-body">
+        <div class="plan-fields">
+          <span class="field-label">Critical Holding Points</span>
+          <textarea class="field-textarea" placeholder="Identify boundaries, roads, and features requiring active holding..."></textarea>
+
+          <span class="field-label">Holding Procedures</span>
+          <textarea class="field-textarea" placeholder="Describe holding actions by location — black line construction, patrol routes..."></textarea>
+
+          <span class="field-label">Mop-up Requirements</span>
+          <textarea class="field-textarea" placeholder="Distance from perimeter, scrape and stir standards, patrol schedule..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- WILDFIRE DECLARATION (El. 18) -->
+    <section class="plan-section" id="section-wildfire-decl">
+      <div class="plan-section-header">
+        <span class="plan-section-title">Wildfire Declaration</span>
+        <span class="plan-section-source">El. 18 &mdash; PMS 484-1</span>
+      </div>
+      <div class="plan-section-body">
+        <div class="plan-fields">
+          <span class="field-label">Declaration Criteria</span>
+          <textarea class="field-textarea" placeholder="Conditions under which fire would be declared a wildfire (escape, prescription exceedance, loss of control)..."></textarea>
+
+          <span class="field-label">Who Declares</span>
+          <input class="field-input" type="text" placeholder="Name / position authorized to declare wildfire">
+
+          <span class="field-label">IC Assignment</span>
+          <input class="field-input" type="text" placeholder="Who assumes IC upon declaration">
+
+          <span class="field-label">Notifications</span>
+          <textarea class="field-textarea" placeholder="Dispatch, agency administrator, state forester, adjacent landowners..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- POST-BURN ACTIVITIES (El. 21) -->
+    <section class="plan-section" id="section-postburn">
+      <div class="plan-section-header">
+        <span class="plan-section-title">Post-burn Activities</span>
+        <span class="plan-section-source">El. 21 &mdash; PMS 484-1</span>
+      </div>
+      <div class="plan-section-body">
+        <div class="plan-fields">
+          <span class="field-label">Mop-up Standards</span>
+          <textarea class="field-textarea" placeholder="Cold-trailing requirements, depth of burn, perimeter patrol standards..."></textarea>
+
+          <span class="field-label">Patrol Requirements</span>
+          <input class="field-input" type="text" placeholder="e.g. Daily patrol for 7 days or until declared out">
+
+          <span class="field-label">Post-burn Report Due</span>
+          <input class="field-input" type="date" id="f-report-due">
+
+          <span class="field-label">Monitoring Plan</span>
+          <textarea class="field-textarea" placeholder="Fuel consumption assessment, photo points, vegetation response monitoring..."></textarea>
+
+          <span class="field-label">Lessons Learned</span>
+          <textarea class="field-textarea" placeholder="Debrief notes, deviations from plan, recommendations for future burns..."></textarea>
         </div>
       </div>
     </section>
