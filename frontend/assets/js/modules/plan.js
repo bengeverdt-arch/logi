@@ -175,7 +175,7 @@ export function initPlan() {
           <input class="field-input" type="text" placeholder="# tenders / capacity">
 
           <span class="field-label">Water Sources</span>
-          <span class="field-auto pending" id="f-water">Pending — v0.7.0</span>
+          <div id="f-water"><p class="plan-pending">Draw a burn unit to load.</p></div>
 
           <span class="field-label">Escape Routes</span>
           <textarea class="field-textarea" placeholder="Describe primary and secondary escape routes..."></textarea>

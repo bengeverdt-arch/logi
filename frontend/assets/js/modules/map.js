@@ -5,7 +5,7 @@
 
 import { WORKER_URL } from '../config.js';
 
-let map, drawnItems, receptorLayer;
+let map, drawnItems, receptorLayer, waterLayer;
 let _onUnitDrawn;
 
 const IMAGERY_LAYER = L.tileLayer(
@@ -33,6 +33,7 @@ export function initMap({ onUnitDrawn }) {
 
   drawnItems    = new L.FeatureGroup().addTo(map);
   receptorLayer = new L.LayerGroup().addTo(map);
+  waterLayer    = new L.LayerGroup().addTo(map);
 
   const drawControl = new L.Control.Draw({
     edit: { featureGroup: drawnItems, remove: true },
@@ -67,11 +68,13 @@ export function initMap({ onUnitDrawn }) {
   map.on(L.Draw.Event.DELETED, () => {
     hideUnitBar();
     receptorLayer.clearLayers();
+    waterLayer.clearLayers();
     _onUnitDrawn(null);
   });
 }
 
 export function getReceptorLayer() { return receptorLayer; }
+export function getWaterLayer()    { return waterLayer; }
 
 function processUnit(layer) {
   const geojson        = layer.toGeoJSON();
