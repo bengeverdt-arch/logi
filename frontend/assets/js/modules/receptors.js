@@ -87,6 +87,15 @@ export async function initReceptors({ lat, lng }, receptorLayer) {
 
   el.appendChild(ul);
 
+  // Auto-fill nearest hospital into Safety section if field is empty
+  const nearestMedical = receptors.find(r => r.type === 'medical' && r.name);
+  if (nearestMedical) {
+    const hospField = document.getElementById('f-nearest-hospital');
+    if (hospField && !hospField.value.trim()) {
+      hospField.value = `${nearestMedical.name} — ${nearestMedical.distance_miles} mi`;
+    }
+  }
+
   // Smoke management notes field
   el.insertAdjacentHTML('beforeend', `
     <div style="margin-top:12px;display:grid;grid-template-columns:140px 1fr;align-items:start;gap:6px">

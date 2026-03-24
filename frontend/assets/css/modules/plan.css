@@ -434,6 +434,79 @@
 .gonogo-badge.nodata { color: var(--color-text-muted);   border-color: var(--color-border); }
 .gonogo-badge.na     { color: var(--color-text-muted);   border-color: transparent; }
 
+/* ---- Rx NOT SET print flag ---- */
+.rx-not-set {
+  display: none;
+}
+
+@media print {
+  .rx-not-set {
+    display: inline;
+    color: #cc0000;
+    font-weight: bold;
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-left: 6px;
+  }
+}
+
+/* ---- Smoke / Ventilation Index ---- */
+.smoke-vi-block {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.smoke-vi-title {
+  font-size: 0.65rem;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.smoke-vi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.smoke-vi-stat {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  padding: 6px 8px;
+}
+
+.smoke-vi-note {
+  font-size: 0.63rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+@media print {
+  .smoke-vi-block { border-color: #ddd; }
+  .smoke-vi-stat  { background: #f5f5f5; border-color: #ccc; }
+  .smoke-vi-note  { color: #666; }
+}
+
+/* ---- Infra auto block (power lines) ---- */
+.infra-auto-block {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.infra-auto-label {
+  font-size: 0.63rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin: 0 0 6px;
+}
+
 /* ---- Print button ---- */
 .btn-print {
   background: var(--color-accent);

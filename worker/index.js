@@ -4,6 +4,7 @@ import { handleNWS }         from './handlers/nws.js';
 import { handleOSM }         from './handlers/osm.js';
 import { handleLandStatus }  from './handlers/landstatus.js';
 import { handleGeocode }     from './handlers/geocode.js';
+import { handleElevation }   from './handlers/elevation.js';
 
 export default {
   async fetch(request, env) {
@@ -20,6 +21,7 @@ export default {
       if (pathname.startsWith('/api/osm'))         return handleOSM(request, env, url);
       if (pathname.startsWith('/api/landstatus'))  return handleLandStatus(request, env, url);
       if (pathname.startsWith('/api/geocode'))     return handleGeocode(request, env, url);
+      if (pathname.startsWith('/api/elevation'))   return handleElevation(request, env, url);
 
       return jsonResponse({ error: 'Not found.' }, 404);
 

@@ -13,10 +13,12 @@ export async function initWeather({ lat, lng }) {
   setLoading('conditions-body', 'Fetching RAWS data');
   setLoading('forecast-body',   'Fetching NWS forecast');
 
-  const [rawsResult, alertsResult, forecastResult] = await Promise.allSettled([
+  const [rawsResult, alertsResult, forecastResult, elevResult, ventResult] = await Promise.allSettled([
     diagFetch(`${WORKER_URL}/api/synoptic?lat=${lat}&lng=${lng}`, 'SYNOPTIC'),
     diagFetch(`${WORKER_URL}/api/nws/alerts?lat=${lat}&lng=${lng}`, 'NWS-ALERTS'),
     diagFetch(`${WORKER_URL}/api/nws/forecast?lat=${lat}&lng=${lng}`, 'NWS-FCST'),
+    diagFetch(`${WORKER_URL}/api/elevation?lat=${lat}&lng=${lng}`, 'ELEV'),
+    diagFetch(`${WORKER_URL}/api/nws/ventilation?lat=${lat}&lng=${lng}`, 'NWS-VENT'),
   ]);
 
   if (forecastResult.status === 'fulfilled' && forecastResult.value?.location) {
@@ -30,8 +32,11 @@ export async function initWeather({ lat, lng }) {
     _latestRaws = null;
   }
 
-  renderConditions(rawsResult);
+  const centroidElevFt = elevResult.status === 'fulfilled' ? (elevResult.value.elevation_ft ?? null) : null;
+
+  renderConditions(rawsResult, centroidElevFt);
   renderForecast(alertsResult, forecastResult);
+  renderVentilation(ventResult);
 }
 
 async function diagFetch(url, src) {
@@ -57,7 +62,7 @@ function setLoading(id, msg) {
 }
 
 // ---- RAWS ----
-function renderConditions(result) {
+function renderConditions(result, centroidElevFt) {
   const el = document.getElementById('conditions-body');
   if (!el) return;
 
@@ -76,9 +81,16 @@ function renderConditions(result) {
   const { fuel_moisture: fm, air_temp: temp, relative_humidity: rh,
           wind_speed: ws, wind_direction: wd } = latest;
 
+  const stationElev = station.elevation_ft ?? null;
+  let elevDisplay = stationElev != null ? `${stationElev.toLocaleString()} ft` : '?';
+  if (stationElev != null && centroidElevFt != null) {
+    const delta = Math.round(stationElev - centroidElevFt);
+    elevDisplay += ` (${delta >= 0 ? '+' : ''}${delta} ft vs unit)`;
+  }
+
   el.innerHTML = `
     <div class="raws-name">${station.name}</div>
-    <div class="raws-meta">${station.stid} &mdash; ${station.distance_miles?.toFixed(1) ?? '?'} mi from centroid &mdash; Elev: ${station.elevation_ft ?? '?'} ft</div>
+    <div class="raws-meta">${station.stid} &mdash; ${station.distance_miles?.toFixed(1) ?? '?'} mi from centroid &mdash; Elev: ${elevDisplay}</div>
     <div class="raws-timestamp ${stale ? 'stale' : 'fresh'}">
       ${stale ? '⚠ STALE &mdash; ' : ''}Last obs: ${timeStr}
     </div>
@@ -102,6 +114,50 @@ function cell(label, value, flagged) {
 function deg2card(deg) {
   const d = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   return d[Math.round(deg / 22.5) % 16];
+}
+
+// ---- Smoke / Ventilation Index ----
+function renderVentilation(result) {
+  const el = document.getElementById('smoke-vi-body');
+  if (!el) return;
+
+  if (result.status === 'rejected' || !result.value) {
+    el.innerHTML = '';
+    return;
+  }
+
+  const { mixing_height_ft, transport_wind_mph, ventilation_index: vi, vi_class } = result.value;
+
+  if (vi == null && mixing_height_ft == null) {
+    el.innerHTML = '';
+    return;
+  }
+
+  const viColor = vi_class === 'good'     ? 'var(--color-ok)'
+                : vi_class === 'marginal' ? 'var(--color-warn)'
+                : vi_class === 'poor'     ? 'var(--color-danger)'
+                : 'var(--color-text-muted)';
+
+  el.innerHTML = `
+    <div class="smoke-vi-block">
+      <div class="smoke-vi-title">Ventilation Index</div>
+      <div class="smoke-vi-row">
+        ${viCell('Mixing Height', mixing_height_ft != null ? mixing_height_ft.toLocaleString() + ' ft' : '—', 'var(--color-text)')}
+        ${viCell('Transport Wind', transport_wind_mph != null ? transport_wind_mph + ' mph' : '—', 'var(--color-text)')}
+        ${viCell('Vent. Index', vi != null ? vi.toLocaleString() : '—', viColor)}
+        ${viCell('Class', vi_class ? vi_class.toUpperCase() : '—', viColor)}
+      </div>
+      <p class="smoke-vi-note">VI = mixing height &times; transport wind &mdash; record for day-of comparison.
+        &lt;500 poor &mdash; 500&ndash;999 marginal &mdash; &ge;1000 good &mdash; Source: NWS</p>
+    </div>
+  `;
+}
+
+function viCell(label, value, color) {
+  return `<div class="smoke-vi-stat">
+    <div class="obs-label">${label}</div>
+    <div class="obs-value" style="color:${color}">${value}</div>
+  </div>`;
 }
 
 // ---- NWS Forecast ----

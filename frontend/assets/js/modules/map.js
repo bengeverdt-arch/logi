@@ -5,7 +5,7 @@
 
 import { WORKER_URL } from '../config.js';
 
-let map, drawnItems, receptorLayer, waterLayer;
+let map, drawnItems, receptorLayer, waterLayer, infraLayer;
 let _onUnitDrawn;
 
 const IMAGERY_LAYER = L.tileLayer(
@@ -19,9 +19,9 @@ const LABELS_OVERLAY = L.tileLayer(
   { attribution: 'Labels &copy; Esri', maxZoom: 19, pane: 'shadowPane' }
 );
 
-const TOPO_OVERLAY = L.tileLayer(
-  'https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',
-  { attribution: 'USGS Topo', maxZoom: 16, opacity: 0.55 }
+const HILLSHADE_OVERLAY = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',
+  { attribution: 'Hillshade &copy; Esri', maxZoom: 19, opacity: 0.45 }
 );
 
 export function initMap({ onUnitDrawn }) {
@@ -34,6 +34,7 @@ export function initMap({ onUnitDrawn }) {
   drawnItems    = new L.FeatureGroup().addTo(map);
   receptorLayer = new L.LayerGroup().addTo(map);
   waterLayer    = new L.LayerGroup().addTo(map);
+  infraLayer    = new L.LayerGroup().addTo(map);
 
   const drawControl = new L.Control.Draw({
     edit: { featureGroup: drawnItems, remove: true },
@@ -69,12 +70,14 @@ export function initMap({ onUnitDrawn }) {
     hideUnitBar();
     receptorLayer.clearLayers();
     waterLayer.clearLayers();
+    infraLayer.clearLayers();
     _onUnitDrawn(null);
   });
 }
 
 export function getReceptorLayer() { return receptorLayer; }
 export function getWaterLayer()    { return waterLayer; }
+export function getInfraLayer()    { return infraLayer; }
 
 function processUnit(layer) {
   const geojson        = layer.toGeoJSON();
@@ -113,8 +116,8 @@ function hideMapHint() {
   document.getElementById('map-hint')?.classList.add('hidden');
 }
 
-let topoActive   = false;
-let labelsActive = false;
+let hillshadeActive = false;
+let labelsActive    = false;
 
 function buildLayerToggle() {
   const div = L.DomUtil.create('div', '');
@@ -122,7 +125,7 @@ function buildLayerToggle() {
   div.innerHTML = `
     <button class="layer-btn active" id="btn-imagery">Imagery</button>
     <button class="layer-btn" id="btn-labels">+ Labels</button>
-    <button class="layer-btn" id="btn-topo">+ Topo</button>
+    <button class="layer-btn" id="btn-hillshade">Hillshade</button>
   `;
   document.getElementById('map').appendChild(div);
 
@@ -139,14 +142,14 @@ function buildLayerToggle() {
     }
   });
 
-  document.getElementById('btn-topo').addEventListener('click', () => {
-    topoActive = !topoActive;
-    if (topoActive) {
-      TOPO_OVERLAY.addTo(map);
-      document.getElementById('btn-topo').classList.add('active');
+  document.getElementById('btn-hillshade').addEventListener('click', () => {
+    hillshadeActive = !hillshadeActive;
+    if (hillshadeActive) {
+      HILLSHADE_OVERLAY.addTo(map);
+      document.getElementById('btn-hillshade').classList.add('active');
     } else {
-      map.removeLayer(TOPO_OVERLAY);
-      document.getElementById('btn-topo').classList.remove('active');
+      map.removeLayer(HILLSHADE_OVERLAY);
+      document.getElementById('btn-hillshade').classList.remove('active');
     }
   });
 }

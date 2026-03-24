@@ -14,8 +14,9 @@ export async function handleNWS(request, env, url) {
   if (!lat || !lng) return jsonResponse({ error: 'Missing lat or lng.' }, 400);
 
   try {
-    if (url.pathname === '/api/nws/forecast') return await getForecast(lat, lng);
-    if (url.pathname === '/api/nws/alerts')   return await getAlerts(lat, lng);
+    if (url.pathname === '/api/nws/forecast')    return await getForecast(lat, lng);
+    if (url.pathname === '/api/nws/alerts')      return await getAlerts(lat, lng);
+    if (url.pathname === '/api/nws/ventilation') return await getVentilation(lat, lng);
     return jsonResponse({ error: 'Not found.' }, 404);
   } catch (err) {
     return jsonResponse({ error: err.message }, 502);
@@ -77,4 +78,46 @@ async function getAlerts(lat, lng) {
       expires:     f.properties.expires,
     })),
   });
+}
+
+async function getVentilation(lat, lng) {
+  // Step 1: resolve grid point
+  const points = await nwsGet(`https://api.weather.gov/points/${lat},${lng}`);
+  const props  = points.properties ?? {};
+
+  const office = props.cwa;
+  const gridX  = props.gridX;
+  const gridY  = props.gridY;
+
+  if (!office || gridX == null || gridY == null) {
+    throw new Error('Could not resolve NWS grid for these coordinates.');
+  }
+
+  // Step 2: fetch gridpoint data — contains mixing height + transport wind
+  const gridData = await nwsGet(`https://api.weather.gov/gridpoints/${office}/${gridX},${gridY}`);
+  const gp       = gridData.properties ?? {};
+
+  // NWS units: mixingHeight in meters, transportWindSpeed in km/h
+  const mixingM      = getFirstValue(gp.mixingHeight?.values);
+  const transportKph = getFirstValue(gp.transportWindSpeed?.values);
+
+  const mixing_height_ft   = mixingM      != null ? Math.round(mixingM * 3.28084)       : null;
+  const transport_wind_mph = transportKph != null ? Math.round(transportKph * 0.621371) : null;
+
+  const vi = (mixing_height_ft != null && transport_wind_mph != null)
+    ? Math.round(mixing_height_ft * transport_wind_mph)
+    : null;
+
+  const vi_class = vi == null ? null
+    : vi < 500  ? 'poor'
+    : vi < 1000 ? 'marginal'
+    : 'good';
+
+  return jsonResponse({ mixing_height_ft, transport_wind_mph, ventilation_index: vi, vi_class });
+}
+
+function getFirstValue(values) {
+  if (!Array.isArray(values) || !values.length) return null;
+  const v = values[0]?.value;
+  return (v != null && v !== 'null') ? v : null;
 }

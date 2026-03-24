@@ -237,6 +237,7 @@ export function initPlan() {
         <span class="plan-section-source">El. 13 &mdash; PMS 484-1</span>
       </div>
       <div class="plan-section-body">
+        <div id="f-powerlines"></div>
         <div class="plan-fields">
           <span class="field-label">Hazards</span>
           <textarea class="field-textarea" placeholder="Snags, steep terrain, barbed wire, roads, aerial hazards..."></textarea>
@@ -251,7 +252,7 @@ export function initPlan() {
           <textarea class="field-textarea" placeholder="Location and size of designated safety zones..."></textarea>
 
           <span class="field-label">Nearest Hospital</span>
-          <input class="field-input" type="text" placeholder="Name, address, distance from unit">
+          <input class="field-input" id="f-nearest-hospital" type="text" placeholder="Name, address, distance from unit">
 
           <span class="field-label">Emergency Contacts</span>
           <textarea class="field-textarea" placeholder="911, poison control, agency safety officer, aviation if applicable..."></textarea>
@@ -289,10 +290,13 @@ export function initPlan() {
     <section class="plan-section" id="section-receptors">
       <div class="plan-section-header">
         <span class="plan-section-title">Sensitive Receptors / Smoke Management</span>
-        <span class="plan-section-source">Auto &mdash; OpenStreetMap</span>
+        <span class="plan-section-source">Auto &mdash; OpenStreetMap + NWS</span>
       </div>
-      <div class="plan-section-body" id="receptors-body">
-        <p class="plan-pending">Draw a burn unit to load.</p>
+      <div class="plan-section-body">
+        <div id="smoke-vi-body"></div>
+        <div id="receptors-body">
+          <p class="plan-pending">Draw a burn unit to load.</p>
+        </div>
       </div>
     </section>
 
@@ -314,6 +318,9 @@ export function initPlan() {
 
           <span class="field-label">Water Sources</span>
           <div id="f-water"><p class="plan-pending">Draw a burn unit to load.</p></div>
+
+          <span class="field-label">Helipads / LZ</span>
+          <div id="f-helipads"><p class="plan-pending">Draw a burn unit to load.</p></div>
 
           <span class="field-label">Escape Routes</span>
           <textarea class="field-textarea" placeholder="Describe primary and secondary escape routes..."></textarea>
@@ -551,7 +558,31 @@ export function initPlan() {
 
   `;
 
-  document.getElementById('btn-print').addEventListener('click', () => window.print());
+  document.getElementById('btn-print').addEventListener('click', () => {
+    const rxIds = [
+      'rx-wind-min', 'rx-wind-max', 'rx-wind-dir',
+      'rx-rh-min',   'rx-rh-max',
+      'rx-temp-min', 'rx-temp-max',
+      'rx-fm10-min', 'rx-fm10-max',
+      'rx-fm100-min','rx-fm100-max',
+      'rx-mixing-min','rx-transport-min',
+    ];
+
+    const flags = [];
+    rxIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.value.trim()) {
+        const flag = document.createElement('span');
+        flag.className = 'rx-not-set';
+        flag.textContent = 'NOT SET';
+        el.insertAdjacentElement('afterend', flag);
+        flags.push(flag);
+      }
+    });
+
+    window.addEventListener('afterprint', () => flags.forEach(f => f.remove()), { once: true });
+    window.print();
+  });
 }
 
 export function updateUnitFields({ acres, lat, lng }) {

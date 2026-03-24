@@ -24,6 +24,12 @@ export async function handleOSM(request, env, url) {
     return getWaterSources(lat, lng, radius);
   }
 
+  if (url.pathname === '/api/osm/infrastructure') {
+    const hazardRadius = parseInt(url.searchParams.get('hazard_radius') || '1609', 10);  // 1 mile for power lines
+    const heliRadius   = parseInt(url.searchParams.get('heli_radius')   || '16093', 10); // 10 miles for helipads
+    return getInfrastructure(lat, lng, hazardRadius, heliRadius);
+  }
+
   return jsonResponse({ error: 'Not found.' }, 404);
 }
 
@@ -183,6 +189,77 @@ function classifyWater(tags) {
   if (waterType === 'pond')                                 return 'pond';
   if (waterType === 'lake')                                 return 'lake';
   return 'water';
+}
+
+// ============================================================
+// Infrastructure — power lines (hazards) + helipads
+// ============================================================
+
+async function getInfrastructure(centerLat, centerLng, hazardRadius, heliRadius) {
+  const query = buildInfraQuery(centerLat, centerLng, hazardRadius, heliRadius);
+
+  let data;
+  try {
+    const res = await fetch(OVERPASS, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    `data=${encodeURIComponent(query)}`,
+    });
+    if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
+    data = await res.json();
+  } catch (err) {
+    return jsonResponse({ error: `Overpass API error: ${err.message}` }, 502);
+  }
+
+  const powerlines = [];
+  const helipads   = [];
+  const seenPower  = new Set();
+
+  for (const el of (data.elements || [])) {
+    const lat  = el.lat ?? el.center?.lat;
+    const lng  = el.lon ?? el.center?.lon;
+    if (!lat || !lng) continue;
+
+    const tags = el.tags || {};
+    const dist = haversine(parseFloat(centerLat), parseFloat(centerLng), lat, lng);
+
+    if (tags.power === 'line') {
+      const name    = tags.name || tags.ref || null;
+      const voltage = tags.voltage || null;
+      const key     = name ? `line:${name}` : `line:${el.id}`;
+      if (!seenPower.has(key)) {
+        seenPower.add(key);
+        powerlines.push({ id: el.id, name, voltage, lat, lng, distance_miles: dist });
+      }
+    }
+
+    if (tags.aeroway === 'helipad') {
+      const name = tags.name || null;
+      helipads.push({ id: el.id, name, lat, lng, distance_miles: dist });
+    }
+  }
+
+  powerlines.sort((a, b) => a.distance_miles - b.distance_miles);
+  helipads.sort((a, b) => a.distance_miles - b.distance_miles);
+
+  return jsonResponse({
+    powerlines,
+    helipads,
+    hazard_radius_m: hazardRadius,
+    heli_radius_m:   heliRadius,
+  });
+}
+
+function buildInfraQuery(centerLat, centerLng, hazardRadius, heliRadius) {
+  const aroundHazard = `(around:${hazardRadius},${centerLat},${centerLng})`;
+  const aroundHeli   = `(around:${heliRadius},${centerLat},${centerLng})`;
+  return `[out:json][timeout:30];
+(
+  way["power"="line"]${aroundHazard};
+  node["aeroway"="helipad"]${aroundHeli};
+  way["aeroway"="helipad"]${aroundHeli};
+);
+out center tags;`;
 }
 
 function parseWaterElements(elements, centerLat, centerLng) {
