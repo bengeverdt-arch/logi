@@ -242,11 +242,15 @@ async function getInfrastructure(centerLat, centerLng, hazardRadius, heliRadius)
   powerlines.sort((a, b) => a.distance_miles - b.distance_miles);
   helipads.sort((a, b) => a.distance_miles - b.distance_miles);
 
+  const powerlines_total = powerlines.length;
+  const powerlinesCapped = powerlines.slice(0, 5);
+
   return jsonResponse({
-    powerlines,
+    powerlines:       powerlinesCapped,
+    powerlines_total,
     helipads,
-    hazard_radius_m: hazardRadius,
-    heli_radius_m:   heliRadius,
+    hazard_radius_m:  hazardRadius,
+    heli_radius_m:    heliRadius,
   });
 }
 

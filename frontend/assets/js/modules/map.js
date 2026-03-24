@@ -20,7 +20,7 @@ const LABELS_OVERLAY = L.tileLayer(
 );
 
 const HILLSHADE_OVERLAY = L.tileLayer(
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}',
   { attribution: 'Hillshade &copy; Esri', maxZoom: 19, opacity: 0.45 }
 );
 

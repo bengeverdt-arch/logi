@@ -51,8 +51,18 @@ export async function initReceptors({ lat, lng }, receptorLayer) {
   if (!receptors.length) {
     el.insertAdjacentHTML('beforeend',
       `<p class="plan-ok">No sensitive receptors found within ${radiusMi} mile radius.</p>`);
+    document.dispatchEvent(new CustomEvent('receptors:loaded', {
+      detail: { nearestMiles: null, nearestName: null },
+    }));
     return;
   }
+
+  document.dispatchEvent(new CustomEvent('receptors:loaded', {
+    detail: {
+      nearestMiles: receptors[0].distance_miles,
+      nearestName:  receptors[0].name,
+    },
+  }));
 
   el.insertAdjacentHTML('beforeend',
     `<p style="font-size:0.68rem;color:var(--color-text-muted);margin-bottom:8px">

@@ -88,13 +88,12 @@ export async function initWaterSources({ lat, lng }, waterLayer) {
   ];
 
   orderedTypes.forEach(type => {
-    const items = grouped[type];
+    const items  = grouped[type];
     const color  = TYPE_COLOR[type] || '#4fc3f7';
     const label  = TYPE_LABEL[type] || type;
     const letter = label[0];
-    const overflow = items.length > COLLAPSE_THRESHOLD;
 
-    // Add map markers for all items
+    // Add map markers for ALL items (named and unnamed)
     items.forEach(s => {
       L.marker([s.lat, s.lng], {
         icon: L.divIcon({
@@ -103,6 +102,11 @@ export async function initWaterSources({ lat, lng }, waterLayer) {
         }),
       }).bindPopup(`<strong>${s.name || 'Unnamed'}</strong><br>${label}`).addTo(waterLayer);
     });
+
+    // List: named items only
+    const named   = items.filter(s => s.name);
+    const unnamed = items.filter(s => !s.name);
+    const overflow = named.length > COLLAPSE_THRESHOLD;
 
     const groupDiv = document.createElement('div');
     groupDiv.className = 'water-group';
@@ -117,32 +121,44 @@ export async function initWaterSources({ lat, lng }, waterLayer) {
     `;
     groupDiv.appendChild(header);
 
-    // Item list
-    const ul = document.createElement('ul');
-    ul.className = 'receptor-list';
+    // Named item list
+    if (named.length) {
+      const ul = document.createElement('ul');
+      ul.className = 'receptor-list';
 
-    items.forEach((s, i) => {
-      const li = document.createElement('li');
-      li.className = 'receptor-item';
-      if (overflow && i >= COLLAPSE_THRESHOLD) li.classList.add('water-hidden');
-      li.innerHTML = `
-        <span class="receptor-name${s.name ? '' : ' unnamed'}">${s.name || 'unnamed'}</span>
-        <span class="receptor-dist">${s.distance_miles} mi</span>
-      `;
-      ul.appendChild(li);
-    });
-
-    groupDiv.appendChild(ul);
-
-    // Wire show-all toggle
-    if (overflow) {
-      const btn = header.querySelector('.water-show-more');
-      const hidden = ul.querySelectorAll('.water-hidden');
-      btn.addEventListener('click', () => {
-        const expanded = btn.textContent === 'show fewer';
-        hidden.forEach(li => li.classList.toggle('water-hidden', expanded));
-        btn.textContent = expanded ? 'show all' : 'show fewer';
+      named.forEach((s, i) => {
+        const li = document.createElement('li');
+        li.className = 'receptor-item';
+        if (overflow && i >= COLLAPSE_THRESHOLD) li.classList.add('water-hidden');
+        li.innerHTML = `
+          <span class="receptor-name">${s.name}</span>
+          <span class="receptor-dist">${s.distance_miles} mi</span>
+        `;
+        ul.appendChild(li);
       });
+
+      groupDiv.appendChild(ul);
+
+      // Wire show-all toggle
+      if (overflow) {
+        const btn    = header.querySelector('.water-show-more');
+        const hiddenItems = ul.querySelectorAll('.water-hidden');
+        btn.dataset.expanded = 'false';
+        btn.addEventListener('click', () => {
+          const willExpand = btn.dataset.expanded !== 'true';
+          hiddenItems.forEach(li => li.classList.toggle('water-hidden', !willExpand));
+          btn.dataset.expanded = willExpand ? 'true' : 'false';
+          btn.textContent = willExpand ? 'show fewer' : 'show all';
+        });
+      }
+    }
+
+    // Unnamed count note (map only)
+    if (unnamed.length) {
+      const note = document.createElement('p');
+      note.style.cssText = 'font-size:0.63rem;color:var(--color-text-muted);margin:2px 0 0;font-style:italic';
+      note.textContent = `+${unnamed.length} unnamed — shown on map`;
+      groupDiv.appendChild(note);
     }
 
     el.appendChild(groupDiv);

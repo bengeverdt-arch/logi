@@ -31,11 +31,11 @@ export async function initInfrastructure({ lat, lng }, infraLayer) {
     return;
   }
 
-  renderPowerLines(data.powerlines || [], data.hazard_radius_m);
+  renderPowerLines(data.powerlines || [], data.hazard_radius_m, data.powerlines_total ?? data.powerlines?.length ?? 0);
   renderHelipads(data.helipads || [], data.heli_radius_m, infraLayer);
 }
 
-function renderPowerLines(powerlines, radiusM) {
+function renderPowerLines(powerlines, radiusM, total) {
   const el = document.getElementById('f-powerlines');
   if (!el) return;
 
@@ -60,7 +60,12 @@ function renderPowerLines(powerlines, radiusM) {
     </li>`;
   });
 
+  const truncNote = total > powerlines.length
+    ? `<p style="font-size:0.63rem;color:var(--color-text-muted);margin:3px 0 0;font-style:italic">+${total - powerlines.length} more segments not shown.</p>`
+    : '';
+
   html += `</ul>
+    ${truncNote}
     <p style="font-size:0.63rem;color:var(--color-text-muted);margin:4px 0 0">
       Verify in field. OSM power line coverage varies.
     </p>

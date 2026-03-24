@@ -10,11 +10,13 @@ import { initWaterSources }           from './modules/watersources.js';
 import { initInfrastructure }         from './modules/infrastructure.js';
 import { initGoNoGo, runGoNoGo }      from './modules/gonogo.js';
 import { initLandStatus }             from './modules/landstatus.js';
+import { initSmokeIndex }             from './modules/smokeindex.js';
 import { initDiag }                   from './modules/diag.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   initPlan();
   initGoNoGo();
+  initSmokeIndex();
   initDiag();
 
   initMap({
