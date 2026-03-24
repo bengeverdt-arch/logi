@@ -53,7 +53,10 @@ export async function initWaterSources({ lat, lng }, waterLayer) {
       DIAG.err('OSM Water', data.error || `HTTP ${res.status}`, url);
       throw new Error(data.error || `HTTP ${res.status}`);
     }
-    DIAG.ok('OSM Water', `${data.sources?.length ?? 0} sources found`);
+    const breakdown = Object.entries(
+      (data.sources || []).reduce((acc, s) => { acc[s.type] = (acc[s.type] || 0) + 1; return acc; }, {})
+    ).map(([k, v]) => `${k}:${v}`).join(', ') || 'none';
+    DIAG.ok('OSM Water', `${data.sources?.length ?? 0} sources found`, breakdown);
   } catch (err) {
     if (!data) DIAG.err('OSM Water', err.message, url);
     if (el) el.innerHTML = `<p class="plan-error">Water source scan failed: ${err.message}</p>`;

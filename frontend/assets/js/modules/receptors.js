@@ -30,7 +30,10 @@ export async function initReceptors({ lat, lng }, receptorLayer) {
       DIAG.err('OSM', data.error || `HTTP ${res.status}`, url);
       throw new Error(data.error || `HTTP ${res.status}`);
     }
-    DIAG.ok('OSM', `${data.receptors?.length ?? 0} receptors found`);
+    const breakdown = Object.entries(
+      (data.receptors || []).reduce((acc, r) => { acc[r.type] = (acc[r.type] || 0) + 1; return acc; }, {})
+    ).map(([k, v]) => `${k}:${v}`).join(', ') || 'none';
+    DIAG.ok('OSM', `${data.receptors?.length ?? 0} receptors found`, breakdown);
   } catch (err) {
     if (!data) DIAG.err('OSM', err.message, url);
     if (el) el.innerHTML = `<p class="plan-error">Receptor scan failed: ${err.message}</p>`;

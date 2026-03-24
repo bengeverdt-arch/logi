@@ -4,6 +4,7 @@
 // ============================================================
 
 import { WORKER_URL } from '../config.js';
+import { DIAG } from './diag.js';
 
 let map, drawnItems, receptorLayer, waterLayer, infraLayer;
 let _onUnitDrawn;
@@ -19,10 +20,20 @@ const LABELS_OVERLAY = L.tileLayer(
   { attribution: 'Labels &copy; Esri', maxZoom: 19, pane: 'shadowPane' }
 );
 
-const HILLSHADE_OVERLAY = L.tileLayer(
-  'https://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}',
-  { attribution: 'Hillshade &copy; USGS The National Map', maxZoom: 16, opacity: 0.5 }
-);
+const HILLSHADE_URL = 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}';
+const HILLSHADE_OVERLAY = L.tileLayer(HILLSHADE_URL, {
+  attribution: 'Hillshade &copy; USGS The National Map', maxZoom: 16, opacity: 0.5,
+});
+HILLSHADE_OVERLAY.on('tileerror', (e) => {
+  DIAG.err('HILLSHADE', 'Tile load failed', e.tile?.src ?? HILLSHADE_URL);
+});
+HILLSHADE_OVERLAY.on('tileload', () => {
+  // Only log the first successful tile to confirm the service works
+  if (!HILLSHADE_OVERLAY._diaggedOk) {
+    HILLSHADE_OVERLAY._diaggedOk = true;
+    DIAG.ok('HILLSHADE', 'Tiles loading OK');
+  }
+});
 
 export function initMap({ onUnitDrawn }) {
   _onUnitDrawn = onUnitDrawn;
@@ -145,11 +156,14 @@ function buildLayerToggle() {
   document.getElementById('btn-hillshade').addEventListener('click', () => {
     hillshadeActive = !hillshadeActive;
     if (hillshadeActive) {
+      HILLSHADE_OVERLAY._diaggedOk = false; // reset so first load confirms service
       HILLSHADE_OVERLAY.addTo(map);
       document.getElementById('btn-hillshade').classList.add('active');
+      DIAG.info('HILLSHADE', 'Overlay on', HILLSHADE_URL);
     } else {
       map.removeLayer(HILLSHADE_OVERLAY);
       document.getElementById('btn-hillshade').classList.remove('active');
+      DIAG.info('HILLSHADE', 'Overlay off');
     }
   });
 }

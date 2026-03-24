@@ -5,6 +5,7 @@
 // ============================================================
 
 import { getLatestRaws } from './weather.js';
+import { DIAG } from './diag.js';
 
 const RX_FIELDS = [
   'rx-wind-min', 'rx-wind-max', 'rx-wind-dir',
@@ -106,9 +107,11 @@ export function runGoNoGo() {
   } else if (nogos.length > 0) {
     overall      = `NO-GO \u2014 ${nogos.length} parameter${nogos.length > 1 ? 's' : ''} out of prescription`;
     overallClass = 'overall-nogo';
+    DIAG.warn('GO/NO-GO', overall, nogos.map(c => c.label).join(', '));
   } else {
     overall      = 'GO \u2014 All checked parameters within prescription';
     overallClass = 'overall-go';
+    DIAG.ok('GO/NO-GO', overall);
   }
 
   const visible = checks.filter(c => !c.hide);
