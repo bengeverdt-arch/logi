@@ -266,10 +266,14 @@ function buildInfraQuery(centerLat, centerLng, hazardRadius, heliRadius) {
 out center tags;`;
 }
 
-function parseWaterElements(elements, centerLat, centerLng) {
-  const seen = new Set();
+// Max named sources to return per type — keeps list useful without being overwhelming
+const WATER_TYPE_CAP = 5;
 
-  return elements
+function parseWaterElements(elements, centerLat, centerLng) {
+  const seen    = new Set();
+  const typeCnt = {};
+
+  const all = elements
     .map(el => {
       const lat = el.lat ?? el.center?.lat;
       const lng = el.lon ?? el.center?.lon;
@@ -279,7 +283,7 @@ function parseWaterElements(elements, centerLat, centerLng) {
       const type = classifyWater(tags);
       const name = tags.name || null;
 
-      // Deduplicate waterways and hydrants by name or id to avoid listing every segment/node
+      // Deduplicate waterways by name; hydrants by id
       const dedupeKey = (type === 'river' || type === 'stream' || type === 'canal' || type === 'ditch')
         ? (name ? `${type}:${name}` : null)
         : (type === 'hydrant' ? `hydrant:${el.id}` : null);
@@ -290,9 +294,15 @@ function parseWaterElements(elements, centerLat, centerLng) {
       }
 
       const dist = haversine(parseFloat(centerLat), parseFloat(centerLng), lat, lng);
-
       return { id: el.id, type, name, lat, lng, distance_miles: dist };
     })
     .filter(Boolean)
     .sort((a, b) => a.distance_miles - b.distance_miles);
+
+  // Cap at WATER_TYPE_CAP per type (named and unnamed counted separately)
+  return all.filter(s => {
+    const key = `${s.type}:${s.name ? 'named' : 'unnamed'}`;
+    typeCnt[key] = (typeCnt[key] || 0) + 1;
+    return typeCnt[key] <= WATER_TYPE_CAP;
+  });
 }

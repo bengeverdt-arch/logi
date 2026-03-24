@@ -259,6 +259,25 @@
 .receptor-name.unnamed   { color: var(--color-text-muted); font-style: italic; }
 .receptor-dist           { color: var(--color-text-muted); font-size: 0.72rem; white-space: nowrap; }
 
+/* ---- Water source groups ---- */
+.water-group        { margin-bottom: 8px; }
+.water-group-header { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+.water-group-count  { font-size: 0.65rem; color: var(--color-text-muted); }
+
+.water-show-more {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-family: var(--font);
+  font-size: 0.65rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  margin-left: auto;
+}
+
+.water-hidden { display: none !important; }
+
 /* ---- Land Status ---- */
 .landstatus-row {
   display: flex;

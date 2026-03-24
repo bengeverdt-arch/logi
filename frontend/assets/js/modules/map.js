@@ -20,8 +20,8 @@ const LABELS_OVERLAY = L.tileLayer(
 );
 
 const HILLSHADE_OVERLAY = L.tileLayer(
-  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}',
-  { attribution: 'Hillshade &copy; Esri', maxZoom: 19, opacity: 0.45 }
+  'https://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}',
+  { attribution: 'Hillshade &copy; USGS The National Map', maxZoom: 16, opacity: 0.5 }
 );
 
 export function initMap({ onUnitDrawn }) {
