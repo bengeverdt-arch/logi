@@ -6,7 +6,25 @@
 
 import { jsonResponse } from '../cors.js';
 
-const OVERPASS = 'https://overpass-api.de/api/interpreter';
+const OVERPASS      = 'https://overpass-api.de/api/interpreter';
+const OVERPASS_MIRROR = 'https://overpass.kumi.systems/api/interpreter'; // fallback
+
+async function fetchOverpass(query) {
+  const post = (endpoint) => fetch(endpoint, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body:    `data=${encodeURIComponent(query)}`,
+  });
+
+  let res = await post(OVERPASS);
+  if (res.status === 504 || res.status === 429) {
+    // Primary busy — wait 1.5 s then try mirror
+    await new Promise(r => setTimeout(r, 1500));
+    res = await post(OVERPASS_MIRROR);
+  }
+  if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
+  return res.json();
+}
 
 export async function handleOSM(request, env, url) {
   const lat = url.searchParams.get('lat');
@@ -38,13 +56,7 @@ async function getReceptors(lat, lng, radius) {
 
   let data;
   try {
-    const res = await fetch(OVERPASS, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body:    `data=${encodeURIComponent(query)}`,
-    });
-    if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
-    data = await res.json();
+    data = await fetchOverpass(query);
   } catch (err) {
     return jsonResponse({ error: `Overpass API error: ${err.message}` }, 502);
   }
@@ -133,13 +145,7 @@ async function getWaterSources(lat, lng, radius) {
 
   let data;
   try {
-    const res = await fetch(OVERPASS, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body:    `data=${encodeURIComponent(query)}`,
-    });
-    if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
-    data = await res.json();
+    data = await fetchOverpass(query);
   } catch (err) {
     return jsonResponse({ error: `Overpass API error: ${err.message}` }, 502);
   }
@@ -200,13 +206,7 @@ async function getInfrastructure(centerLat, centerLng, hazardRadius, heliRadius)
 
   let data;
   try {
-    const res = await fetch(OVERPASS, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body:    `data=${encodeURIComponent(query)}`,
-    });
-    if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
-    data = await res.json();
+    data = await fetchOverpass(query);
   } catch (err) {
     return jsonResponse({ error: `Overpass API error: ${err.message}` }, 502);
   }

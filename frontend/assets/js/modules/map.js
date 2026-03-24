@@ -20,20 +20,10 @@ const LABELS_OVERLAY = L.tileLayer(
   { attribution: 'Labels &copy; Esri', maxZoom: 19, pane: 'shadowPane' }
 );
 
-const HILLSHADE_URL = 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}';
-const HILLSHADE_OVERLAY = L.tileLayer(HILLSHADE_URL, {
-  attribution: 'Hillshade &copy; USGS The National Map', maxZoom: 16, opacity: 0.5,
-});
-HILLSHADE_OVERLAY.on('tileerror', (e) => {
-  DIAG.err('HILLSHADE', 'Tile load failed', e.tile?.src ?? HILLSHADE_URL);
-});
-HILLSHADE_OVERLAY.on('tileload', () => {
-  // Only log the first successful tile to confirm the service works
-  if (!HILLSHADE_OVERLAY._diaggedOk) {
-    HILLSHADE_OVERLAY._diaggedOk = true;
-    DIAG.ok('HILLSHADE', 'Tiles loading OK');
-  }
-});
+const TOPO_LAYER = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+  { attribution: 'Topo &copy; Esri, USGS, NOAA', maxZoom: 19 }
+);
 
 export function initMap({ onUnitDrawn }) {
   _onUnitDrawn = onUnitDrawn;
@@ -127,8 +117,8 @@ function hideMapHint() {
   document.getElementById('map-hint')?.classList.add('hidden');
 }
 
-let hillshadeActive = false;
-let labelsActive    = false;
+let topoActive   = false;
+let labelsActive = false;
 
 function buildLayerToggle() {
   const div = L.DomUtil.create('div', '');
@@ -136,7 +126,7 @@ function buildLayerToggle() {
   div.innerHTML = `
     <button class="layer-btn active" id="btn-imagery">Imagery</button>
     <button class="layer-btn" id="btn-labels">+ Labels</button>
-    <button class="layer-btn" id="btn-hillshade">Hillshade</button>
+    <button class="layer-btn" id="btn-topo">Topo</button>
   `;
   document.getElementById('map').appendChild(div);
 
@@ -153,17 +143,23 @@ function buildLayerToggle() {
     }
   });
 
-  document.getElementById('btn-hillshade').addEventListener('click', () => {
-    hillshadeActive = !hillshadeActive;
-    if (hillshadeActive) {
-      HILLSHADE_OVERLAY._diaggedOk = false; // reset so first load confirms service
-      HILLSHADE_OVERLAY.addTo(map);
-      document.getElementById('btn-hillshade').classList.add('active');
-      DIAG.info('HILLSHADE', 'Overlay on', HILLSHADE_URL);
+  document.getElementById('btn-topo').addEventListener('click', () => {
+    topoActive = !topoActive;
+    if (topoActive) {
+      map.removeLayer(IMAGERY_LAYER);
+      if (labelsActive) map.removeLayer(LABELS_OVERLAY);
+      TOPO_LAYER.addTo(map);
+      if (labelsActive) LABELS_OVERLAY.addTo(map);
+      document.getElementById('btn-topo').classList.add('active');
+      document.getElementById('btn-imagery').classList.remove('active');
+      DIAG.info('MAP', 'Base layer: Topo');
     } else {
-      map.removeLayer(HILLSHADE_OVERLAY);
-      document.getElementById('btn-hillshade').classList.remove('active');
-      DIAG.info('HILLSHADE', 'Overlay off');
+      map.removeLayer(TOPO_LAYER);
+      IMAGERY_LAYER.addTo(map);
+      if (labelsActive) LABELS_OVERLAY.addTo(map);
+      document.getElementById('btn-topo').classList.remove('active');
+      document.getElementById('btn-imagery').classList.add('active');
+      DIAG.info('MAP', 'Base layer: Imagery');
     }
   });
 }
