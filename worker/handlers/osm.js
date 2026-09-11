@@ -17,8 +17,8 @@ async function fetchOverpass(query) {
   });
 
   let res = await post(OVERPASS);
-  if (res.status === 504 || res.status === 429) {
-    // Primary busy — wait 1.5 s then try mirror
+  if (!res.ok) {
+    // Primary busy or down (429/504 rate-limited, 5xx incl. Cloudflare 521/522/523) — try mirror
     await new Promise(r => setTimeout(r, 1500));
     res = await post(OVERPASS_MIRROR);
   }
