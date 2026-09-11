@@ -12,7 +12,10 @@ const OVERPASS_MIRROR = 'https://overpass.kumi.systems/api/interpreter'; // fall
 async function fetchOverpass(query) {
   const post = (endpoint) => fetch(endpoint, {
     method:  'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent':   'LOGI-BurnPlanner/1.0 (https://logi-3gv.pages.dev; contact: bengeverdt@gmail.com)',
+    },
     body:    `data=${encodeURIComponent(query)}`,
   });
 
