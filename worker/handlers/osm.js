@@ -9,21 +9,41 @@ import { jsonResponse } from '../cors.js';
 const OVERPASS      = 'https://overpass-api.de/api/interpreter';
 const OVERPASS_MIRROR = 'https://overpass.kumi.systems/api/interpreter'; // fallback
 
-async function fetchOverpass(query) {
-  const post = (endpoint) => fetch(endpoint, {
-    method:  'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent':   'LOGI-BurnPlanner/1.0 (https://logi-3gv.pages.dev; contact: bengeverdt@gmail.com)',
-    },
-    body:    `data=${encodeURIComponent(query)}`,
-  });
+// Overpass's own [timeout:N] only bounds its query execution — a slow or
+// queued server can still leave the HTTP connection hanging far longer
+// (observed: a receptors query hung ~2 minutes before Cloudflare's edge
+// gave up with a 524). Cut each attempt off client-side well before that
+// so a stuck request fails fast instead of leaving the page looking frozen.
+const FETCH_TIMEOUT_MS = 15000;
 
-  let res = await post(OVERPASS);
-  if (!res.ok) {
-    // Primary busy or down (429/504 rate-limited, 5xx incl. Cloudflare 521/522/523) — try mirror
-    await new Promise(r => setTimeout(r, 1500));
-    res = await post(OVERPASS_MIRROR);
+async function fetchOverpass(query) {
+  const post = (endpoint) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    return fetch(endpoint, {
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent':   'LOGI-BurnPlanner/1.0 (https://logi-3gv.pages.dev; contact: bengeverdt@gmail.com)',
+      },
+      body:    `data=${encodeURIComponent(query)}`,
+      signal:  controller.signal,
+    }).finally(() => clearTimeout(timer));
+  };
+
+  let res;
+  try {
+    res = await post(OVERPASS);
+  } catch (err) {
+    res = null; // timeout/abort on primary — fall through to mirror
+  }
+
+  if (!res || !res.ok) {
+    try {
+      res = await post(OVERPASS_MIRROR);
+    } catch (err) {
+      throw new Error(`Overpass timed out on both primary and mirror`);
+    }
   }
   if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
   return res.json();
@@ -75,7 +95,11 @@ async function getReceptors(lat, lng, radius) {
 
 function buildQuery(lat, lng, radius) {
   const around = `(around:${radius},${lat},${lng})`;
-  return `[out:json][timeout:25];
+  // Was: node/way["landuse"="residential"] — large-polygon spatial queries
+  // are the slow part of Overpass under load (observed ~2min hangs).
+  // Individual building tags give the same "are there homes nearby"
+  // signal at a fraction of the query cost.
+  return `[out:json][timeout:20];
 (
   node["amenity"~"^(school|college|university)$"]${around};
   way["amenity"~"^(school|college|university)$"]${around};
@@ -83,8 +107,8 @@ function buildQuery(lat, lng, radius) {
   way["amenity"~"^(hospital|clinic|doctors|pharmacy)$"]${around};
   node["amenity"~"^(nursing_home|social_facility)$"]${around};
   way["amenity"~"^(nursing_home|social_facility)$"]${around};
-  node["landuse"="residential"]${around};
-  way["landuse"="residential"]${around};
+  node["building"~"^(house|residential|detached|apartments)$"]${around};
+  way["building"~"^(house|residential|detached|apartments)$"]${around};
   way["highway"~"^(motorway|trunk|primary|secondary)$"]${around};
 );
 out center tags;`;
@@ -92,12 +116,12 @@ out center tags;`;
 
 function classify(tags) {
   const a = tags.amenity;
-  const l = tags.landuse;
+  const b = tags.building;
   const h = tags.highway;
   if (['school', 'college', 'university'].includes(a))       return 'school';
   if (['hospital', 'clinic', 'doctors', 'pharmacy'].includes(a)) return 'medical';
   if (['nursing_home', 'social_facility'].includes(a))       return 'care_facility';
-  if (l === 'residential')                                    return 'residential';
+  if (['house', 'residential', 'detached', 'apartments'].includes(b)) return 'residential';
   if (['motorway', 'trunk', 'primary', 'secondary'].includes(h)) return 'road';
   return 'other';
 }
