@@ -7,8 +7,10 @@
 
 import { DIAG } from './diag.js';
 
-let _nearestMiles = undefined; // undefined = not yet loaded
-let _nearestName  = null;
+let _nearestReceptorMiles = undefined; // undefined = not yet loaded
+let _nearestReceptorName  = null;
+let _nearestAQMiles       = undefined;
+let _nearestAQName        = null;
 
 // Required VI (ft·mph) by distance to nearest sensitive receptor
 function requiredVI(distMi) {
@@ -29,8 +31,14 @@ function tierLabel(distMi) {
 
 export function initSmokeIndex() {
   document.addEventListener('receptors:loaded', (e) => {
-    _nearestMiles = e.detail.nearestMiles;
-    _nearestName  = e.detail.nearestName;
+    _nearestReceptorMiles = e.detail.nearestMiles;
+    _nearestReceptorName  = e.detail.nearestName;
+    render();
+  });
+
+  document.addEventListener('aqmonitors:loaded', (e) => {
+    _nearestAQMiles = e.detail.nearestMiles;
+    _nearestAQName  = e.detail.nearestName;
     render();
   });
 
@@ -46,19 +54,29 @@ function render() {
   if (!el) return;
 
   // Don't render until receptors have been queried
-  if (_nearestMiles === undefined) return;
+  if (_nearestReceptorMiles === undefined) return;
 
   const mixVal       = parseFloat(document.getElementById('rx-mixing-min')?.value);
   const transportVal = parseFloat(document.getElementById('rx-transport-min')?.value);
 
-  const reqVI  = requiredVI(_nearestMiles);
-  const reqStr = reqVI.toLocaleString();
-  const tier   = tierLabel(_nearestMiles);
+  // Nearest smoke-sensitive target = closer of (OSM receptor, KDAQ AQ monitor).
+  // AQ monitors count as smoke sensitive targets per KPFC guidance — an
+  // Exceptional Event designation is lost if smoke reaches an unmitigated monitor.
+  const useAQ = _nearestAQMiles !== undefined
+    && (_nearestReceptorMiles === null || _nearestAQMiles < _nearestReceptorMiles);
 
-  const receptorLabel = _nearestName
-    ? `${_nearestName} (${_nearestMiles} mi)`
-    : _nearestMiles !== null
-      ? `unnamed receptor (${_nearestMiles} mi)`
+  const nearestMiles = useAQ ? _nearestAQMiles : _nearestReceptorMiles;
+  const nearestName  = useAQ ? _nearestAQName  : _nearestReceptorName;
+  const nearestKind  = useAQ ? 'AQ Monitor' : null;
+
+  const reqVI  = requiredVI(nearestMiles);
+  const reqStr = reqVI.toLocaleString();
+  const tier   = tierLabel(nearestMiles);
+
+  const receptorLabel = nearestName
+    ? `${nearestName}${nearestKind ? ` (${nearestKind})` : ''} (${nearestMiles} mi)`
+    : nearestMiles !== null
+      ? `unnamed receptor (${nearestMiles} mi)`
       : 'None within scan radius';
 
   let viRow;

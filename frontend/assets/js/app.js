@@ -6,6 +6,7 @@ import { initPlan, updateUnitFields } from './modules/plan.js';
 import { initMap, getReceptorLayer, getWaterLayer, getInfraLayer } from './modules/map.js';
 import { initWeather }                from './modules/weather.js';
 import { initReceptors }              from './modules/receptors.js';
+import { initAQMonitors }             from './modules/aqmonitors.js';
 import { initWaterSources }           from './modules/watersources.js';
 import { initInfrastructure }         from './modules/infrastructure.js';
 import { initGoNoGo, runGoNoGo }      from './modules/gonogo.js';
@@ -23,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     onUnitDrawn: (unit) => {
       if (!unit) {
         // Unit deleted — reset data sections
-        ['landstatus-body', 'conditions-body', 'forecast-body', 'receptors-body'].forEach(id => {
+        ['landstatus-body', 'conditions-body', 'forecast-body', 'receptors-body', 'aqmonitors-body'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.innerHTML = '<p class="plan-pending">Draw a burn unit to load.</p>';
         });
@@ -48,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
       initLandStatus(unit);
       initWeather(unit);
       initReceptors(unit, getReceptorLayer());
+      initAQMonitors(unit);
       initWaterSources(unit, getWaterLayer());
       initInfrastructure(unit, getInfraLayer());
     },

@@ -297,6 +297,82 @@ export function initPlan() {
         <div id="receptors-body">
           <p class="plan-pending">Draw a burn unit to load.</p>
         </div>
+        <div id="aqmonitors-body">
+          <p class="plan-pending">Draw a burn unit to load.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- BSMP CHECKLIST -->
+    <section class="plan-section" id="section-bsmp">
+      <div class="plan-section-header">
+        <span class="plan-section-title">Basic Smoke Management Practices</span>
+        <span class="plan-section-source">KPFC BSMP Checklist</span>
+      </div>
+      <div class="plan-section-body">
+        <div class="checklist">
+          ${[
+            {
+              title: 'Evaluation of Smoke Dispersion Conditions',
+              hint: 'Fuel type/loading, probable smoke-impact areas, smoke sensitive targets, meteorological criteria.',
+              noteId: 'bsmp-note-0',
+              notePlaceholder: 'Smoke sensitive targets, dispersion conditions...',
+            },
+            {
+              title: 'Monitoring Effects on Air Quality',
+              hint: 'Check AirNow forecasts/conditions, track smoke transport before, during, after fire.',
+              noteId: 'bsmp-note-1',
+              notePlaceholder: 'Nearest AQ monitor, forecast checked...',
+            },
+            {
+              title: 'Communication / Public Notification',
+              hint: 'KDF/KDAQ (24-hr notice required), emergency personnel, general public health messaging.',
+              noteId: 'bsmp-note-2',
+              notePlaceholder: 'Public notice text, notification method/date...',
+              noteIsTextarea: true,
+            },
+            {
+              title: 'Consideration of Other Emission Reduction Techniques',
+              hint: 'Reduce burn area/fuel load, change fuel, increase combustion efficiency — is fire necessary to meet objectives?',
+              noteId: 'bsmp-note-3',
+              notePlaceholder: 'Techniques considered...',
+            },
+            {
+              title: 'Coordination of Area Burning / Sharing the Airshed',
+              hint: 'Formal procedures between agencies, informal coordination among practitioners.',
+              noteId: 'bsmp-note-4',
+              notePlaceholder: 'Other burns in area, coordination notes...',
+            },
+            {
+              title: 'Documentation / Journaling',
+              hint: 'Burn plan, post-burn report, burn journal/log, record keeping.',
+              noteId: 'bsmp-note-5',
+              notePlaceholder: 'Reference notes...',
+              noteValue: 'Captured in this plan’s Objectives, Test Fire, Monitoring, and Post-burn Activities sections.',
+            },
+          ].map((item, i) => `
+          <div class="checklist-item">
+            <label class="check-cb">
+              <input type="checkbox" id="bsmp-${i}">
+              <span class="check-text"><strong>${item.title}</strong><br><span style="font-size:0.68rem;color:var(--color-text-muted)">${item.hint}</span></span>
+            </label>
+          </div>
+          <div class="plan-fields" style="margin:2px 0 10px 26px">
+            <span class="field-label">Notes</span>
+            ${item.noteIsTextarea
+              ? `<textarea class="field-textarea" id="${item.noteId}" placeholder="${item.notePlaceholder}">${item.noteValue || ''}</textarea>`
+              : `<input class="field-input" id="${item.noteId}" type="text" placeholder="${item.notePlaceholder}" value="${item.noteValue || ''}">`}
+          </div>`).join('')}
+        </div>
+        <div class="plan-fields" style="margin-top:14px">
+          <span class="field-label">Burn Boss</span>
+          <input class="field-input" type="text" placeholder="Name / signature">
+          <span class="field-label">Date</span>
+          <input class="field-input" type="date">
+        </div>
+        <p style="font-size:0.62rem;color:var(--color-text-muted);margin-top:8px">
+          Use is not mandatory, but BSMPs used must be documented for each burn. KPFC BSMP Checklist, updated 9/4/2026.
+        </p>
       </div>
     </section>
 
