@@ -1,7 +1,8 @@
 // ============================================================
 // kyinstitutions.js — KY state "Institutions" FeatureServer
-// Schools + hospitals, one source, no key. Covers OSM's gaps/blind
-// spots on rural school/hospital tagging.
+// Schools + hospitals, one source, no key. KENTUCKY ONLY — returns
+// nothing elsewhere (verified MT/FL/OR 2026-09-22). Supplements OSM's
+// rural school/hospital gaps in KY; OSM still covers every state.
 // Note: FEATTYPE='Hospital/Polyclinic' is user-submitted and includes
 // some mistagged non-hospital facilities (e.g. vet clinics) — surfaced
 // as-is with a disclaimer, same posture as the OSM receptor data.
@@ -53,7 +54,7 @@ export async function getKYInstitutions(lat, lng, radiusMeters) {
       // The frontend auto-fills the plan's nearest-hospital field from the
       // first 'medical' hit — an animal clinic there is worse than blank.
       if (type === 'medical' && VET_NAME.test(f.attributes.NAME || '')) return null;
-      return { name: f.attributes.NAME || null, type, lat: g.y, lng: g.x };
+      return { name: f.attributes.NAME || null, type, lat: g.y, lng: g.x, hospital: type === 'medical' };
     })
     .filter(Boolean);
 }

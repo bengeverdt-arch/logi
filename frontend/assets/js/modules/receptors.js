@@ -48,7 +48,7 @@ export async function initReceptors({ lat, lng }, receptorLayer) {
   el.insertAdjacentHTML('beforeend', `
     <p class="receptors-disclaimer">
       Receptor data sourced from OpenStreetMap, CMS (certified nursing homes), KY Institutions
-      (user-submitted, may be mistagged), Census TIGERweb, and FEMA USA Structures (homes, from ~2015
+      (Kentucky only; user-submitted, may be mistagged), Census TIGERweb, and FEMA USA Structures (homes, from ~2015
       satellite imagery &mdash; newer homes missing, some barns counted). Field verification recommended.
       Do not rely solely on this tool for smoke management planning.
     </p>`);
@@ -119,7 +119,7 @@ export async function initReceptors({ lat, lng }, receptorLayer) {
   el.appendChild(ul);
 
   // Auto-fill nearest hospital into Safety section if field is empty
-  const nearestMedical = receptors.find(r => r.type === 'medical' && r.name);
+  const nearestMedical = receptors.find(r => r.type === 'medical' && r.name && r.hospital);
   if (nearestMedical) {
     const hospField = document.getElementById('f-nearest-hospital');
     if (hospField && !hospField.value.trim()) {

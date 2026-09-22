@@ -404,6 +404,9 @@ export function initPlan() {
           <span class="field-label">Rally Points</span>
           <textarea class="field-textarea" placeholder="Describe rally / safety zone locations..."></textarea>
 
+          <span class="field-label">Fire Department</span>
+          <input class="field-input" id="f-fire-dept" type="text" placeholder="Responding fire department (auto-filled in KY only)">
+
           <span class="field-label">Notifications</span>
           <textarea class="field-textarea" placeholder="Adjacent landowners, agency contacts, dispatch..."></textarea>
 

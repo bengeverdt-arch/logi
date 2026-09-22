@@ -13,7 +13,7 @@ export async function handleElevation(request, env, url) {
 
   try {
     const res = await fetch(
-      `https://epqs.nationalmap.gov/v1/json?x=${lng}&y=${lat}&wkid=4326&includeDate=false`,
+      `https://epqs.nationalmap.gov/v1/json?x=${lng}&y=${lat}&wkid=4326&units=Feet&includeDate=false`,
       { headers: { 'User-Agent': 'LOGI-BurnPlanningTool/0.9' } }
     );
     if (!res.ok) throw new Error(`EPQS HTTP ${res.status}`);

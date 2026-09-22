@@ -9,6 +9,7 @@ import { initReceptors }              from './modules/receptors.js';
 import { initAQMonitors }             from './modules/aqmonitors.js';
 import { initWaterSources }           from './modules/watersources.js';
 import { initInfrastructure }         from './modules/infrastructure.js';
+import { initFireDept }               from './modules/firedept.js';
 import { initGoNoGo, runGoNoGo }      from './modules/gonogo.js';
 import { initLandStatus }             from './modules/landstatus.js';
 import { initSmokeIndex }             from './modules/smokeindex.js';
@@ -52,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
       initAQMonitors(unit);
       initWaterSources(unit, getWaterLayer());
       initInfrastructure(unit, getInfraLayer());
+      initFireDept(unit);
     },
   });
 });

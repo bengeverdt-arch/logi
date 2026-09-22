@@ -109,23 +109,25 @@ async function getReceptors(lat, lng, radius) {
 
   const warnings = [];
   const receptors = [];
-  const care = [];
+  // Official lists first so their names win when the same facility is
+  // also in OSM. OSM covers every state; KY Institutions adds KY coverage.
+  const facilities = [];
   if (cms.status === 'fulfilled') {
-    care.push(...withDistance(cms.value, lat, lng));
+    facilities.push(...withDistance(cms.value, lat, lng).map(f => ({ ...f, src: 'cms' })));
   } else {
     warnings.push(`Certified nursing home list unavailable (CMS: ${cms.reason.message})`);
   }
-  if (osm.status === 'fulfilled') {
-    care.push(...parseElements(osm.value.elements || [], lat, lng));
-  } else {
-    warnings.push(`Assisted living / care facility scan unavailable (OpenStreetMap: ${osm.reason.message})`);
-  }
-  receptors.push(...dedupeCare(care));
   if (ky.status === 'fulfilled') {
-    receptors.push(...withDistance(ky.value, lat, lng));
+    facilities.push(...withDistance(ky.value, lat, lng).map(f => ({ ...f, src: 'ky' })));
   } else {
-    warnings.push(`School / hospital scan unavailable (KY Institutions: ${ky.reason.message})`);
+    warnings.push(`KY school / hospital list unavailable (KY Institutions: ${ky.reason.message})`);
   }
+  if (osm.status === 'fulfilled') {
+    facilities.push(...parseElements(osm.value.elements || [], lat, lng).map(f => ({ ...f, src: 'osm' })));
+  } else {
+    warnings.push(`School / hospital / care facility scan unavailable (OpenStreetMap: ${osm.reason.message})`);
+  }
+  receptors.push(...dedupeAcrossSources(facilities).map(({ src, ...f }) => f));
   if (roads.status === 'fulfilled') {
     receptors.push(...withDistance(roads.value, lat, lng));
   } else {
@@ -152,19 +154,20 @@ async function getReceptors(lat, lng, radius) {
     receptors: inRange,
     residential_total: residentialTotal,
     query_radius_m: radius,
-    source: 'OpenStreetMap + CMS (care facilities), KY Institutions (schools/hospitals), Census TIGERweb (roads), FEMA USA Structures (homes)',
+    source: 'OpenStreetMap (schools/medical/care), CMS (nursing homes), KY Institutions (KY schools/hospitals), Census TIGERweb (roads), FEMA USA Structures (homes)',
     warnings,
   });
 }
 
-const CARE_DUP_MILES = 0.15; // CMS geocodes to the address, OSM to the building
+const DUP_FACILITY_MILES = 0.15; // official lists geocode to the address, OSM to the building
 
-// Same facility from CMS and OSM — keep the first (CMS goes in first,
-// so its official name wins).
-function dedupeCare(items) {
+// Same facility reported by two sources — keep the first. Only collapses
+// across sources: two schools on one campus from the same list both stay.
+function dedupeAcrossSources(items) {
   const kept = [];
   for (const it of items) {
-    if (kept.some(k => haversine(it.lat, it.lng, k.lat, k.lng) < CARE_DUP_MILES)) continue;
+    if (kept.some(k => k.src !== it.src && k.type === it.type &&
+        haversine(it.lat, it.lng, k.lat, k.lng) < DUP_FACILITY_MILES)) continue;
     kept.push(it);
   }
   return kept;
@@ -179,10 +182,15 @@ function withDistance(items, centerLat, centerLng) {
 
 function buildQuery(lat, lng, radius) {
   const around = `(around:${radius},${lat},${lng})`;
-  // Homes moved to FEMA USA Structures; schools/hospitals to KY
-  // Institutions; roads to TIGERweb. OSM still covers assisted living.
+  // Homes moved to FEMA USA Structures, roads to TIGERweb. Schools,
+  // medical and care stay here — OSM is the only one of these that
+  // covers every state (KY Institutions is Kentucky-only).
   return `[out:json][timeout:20];
 (
+  node["amenity"~"^(school|college|university)$"]${around};
+  way["amenity"~"^(school|college|university)$"]${around};
+  node["amenity"~"^(hospital|clinic|doctors|pharmacy)$"]${around};
+  way["amenity"~"^(hospital|clinic|doctors|pharmacy)$"]${around};
   node["amenity"~"^(nursing_home|social_facility)$"]${around};
   way["amenity"~"^(nursing_home|social_facility)$"]${around};
 );
@@ -190,7 +198,10 @@ out center tags;`;
 }
 
 function classify(tags) {
-  if (['nursing_home', 'social_facility'].includes(tags.amenity)) return 'care_facility';
+  const a = tags.amenity;
+  if (['school', 'college', 'university'].includes(a))           return 'school';
+  if (['hospital', 'clinic', 'doctors', 'pharmacy'].includes(a)) return 'medical';
+  if (['nursing_home', 'social_facility'].includes(a))           return 'care_facility';
   return 'other';
 }
 
@@ -207,7 +218,8 @@ function parseElements(elements, centerLat, centerLng) {
 
       const dist = haversine(parseFloat(centerLat), parseFloat(centerLng), lat, lng);
 
-      return { id: el.id, type, name, lat, lng, distance_miles: dist };
+      // Only real hospitals may auto-fill the plan's nearest-hospital field.
+      return { id: el.id, type, name, lat, lng, distance_miles: dist, hospital: tags.amenity === 'hospital' };
     })
     .filter(Boolean)
     .sort((a, b) => a.distance_miles - b.distance_miles);
