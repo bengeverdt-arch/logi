@@ -47,9 +47,17 @@ export async function initReceptors({ lat, lng }, receptorLayer) {
 
   el.insertAdjacentHTML('beforeend', `
     <p class="receptors-disclaimer">
-      Receptor data sourced from OpenStreetMap. Field verification recommended.
+      Receptor data sourced from OpenStreetMap, KY Institutions (user-submitted, may be mistagged),
+      and Census TIGERweb. Field verification recommended.
       Do not rely solely on this tool for smoke management planning.
     </p>`);
+
+  // A failed source means its receptor types are missing, not absent —
+  // say so, or an empty list reads as "no schools nearby".
+  (data.warnings || []).forEach(w => {
+    DIAG.err('OSM', w, url);
+    el.insertAdjacentHTML('beforeend', `<p class="plan-error">&#9888; ${w}</p>`);
+  });
 
   if (!receptors.length) {
     el.insertAdjacentHTML('beforeend',

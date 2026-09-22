@@ -68,8 +68,13 @@ export async function initWaterSources({ lat, lng }, waterLayer) {
 
   el.innerHTML = '';
 
+  (data.warnings || []).forEach(w => {
+    DIAG.err('OSM Water', w, url);
+    el.insertAdjacentHTML('beforeend', `<p class="plan-error">&#9888; ${w}</p>`);
+  });
+
   if (!sources.length) {
-    el.innerHTML = `<p class="plan-ok" style="margin:0">No water sources found within ${radiusMi} mi radius. Verify locally.</p>`;
+    el.insertAdjacentHTML('beforeend', `<p class="plan-ok" style="margin:0">No water sources found within ${radiusMi} mi radius. Verify locally.</p>`);
     return;
   }
 

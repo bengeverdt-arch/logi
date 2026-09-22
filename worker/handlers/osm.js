@@ -5,6 +5,9 @@
 // ============================================================
 
 import { jsonResponse } from '../cors.js';
+import { getKYInstitutions } from './kyinstitutions.js';
+import { getTIGERRoads }     from './tigerweb.js';
+import { get3DHPWater }      from './hydro3dhp.js';
 
 const OVERPASS      = 'https://overpass-api.de/api/interpreter';
 const OVERPASS_MIRROR = 'https://overpass.kumi.systems/api/interpreter'; // fallback
@@ -74,23 +77,61 @@ export async function handleOSM(request, env, url) {
   return jsonResponse({ error: 'Not found.' }, 404);
 }
 
+// Receptors are merged from three independent sources, each covering what
+// it's most reliable for:
+//   Overpass (OSM)     — care facilities + residential buildings
+//   KY Institutions    — schools + hospitals
+//   Census TIGERweb    — primary + secondary roads
+// A source that fails is named in `warnings` rather than silently dropped —
+// "no schools found" when the school source was down would be a wrong field.
 async function getReceptors(lat, lng, radius) {
-  const query = buildQuery(lat, lng, radius);
+  const [osm, ky, roads] = await Promise.allSettled([
+    fetchOverpass(buildQuery(lat, lng, radius)),
+    getKYInstitutions(lat, lng, radius),
+    getTIGERRoads(lat, lng, radius),
+  ]);
 
-  let data;
-  try {
-    data = await fetchOverpass(query);
-  } catch (err) {
-    return jsonResponse({ error: `Overpass API error: ${err.message}` }, 502);
+  if ([osm, ky, roads].every(r => r.status === 'rejected')) {
+    return jsonResponse({ error: `All receptor sources failed (OSM: ${osm.reason.message}; KY: ${ky.reason.message}; TIGER: ${roads.reason.message})` }, 502);
   }
 
-  const receptors = parseElements(data.elements || [], lat, lng);
+  const warnings = [];
+  const receptors = [];
+  if (osm.status === 'fulfilled') {
+    receptors.push(...parseElements(osm.value.elements || [], lat, lng));
+  } else {
+    warnings.push(`Care facility / residential scan unavailable (OpenStreetMap: ${osm.reason.message})`);
+  }
+  if (ky.status === 'fulfilled') {
+    receptors.push(...withDistance(ky.value, lat, lng));
+  } else {
+    warnings.push(`School / hospital scan unavailable (KY Institutions: ${ky.reason.message})`);
+  }
+  if (roads.status === 'fulfilled') {
+    receptors.push(...withDistance(roads.value, lat, lng));
+  } else {
+    warnings.push(`Road scan unavailable (Census TIGERweb: ${roads.reason.message})`);
+  }
+
+  // ArcGIS sources are queried by bounding box — trim the corners back to a true radius.
+  const radiusMi = radius / 1609.34;
+  const inRange = receptors
+    .filter(r => r.distance_miles <= radiusMi)
+    .sort((a, b) => a.distance_miles - b.distance_miles);
 
   return jsonResponse({
-    receptors,
+    receptors: inRange,
     query_radius_m: radius,
-    source: 'OpenStreetMap via Overpass API',
+    source: 'OpenStreetMap (care/residential), KY Institutions (schools/hospitals), Census TIGERweb (roads)',
+    warnings,
   });
+}
+
+function withDistance(items, centerLat, centerLng) {
+  return items.map(it => ({
+    ...it,
+    distance_miles: haversine(parseFloat(centerLat), parseFloat(centerLng), it.lat, it.lng),
+  }));
 }
 
 function buildQuery(lat, lng, radius) {
@@ -99,17 +140,13 @@ function buildQuery(lat, lng, radius) {
   // are the slow part of Overpass under load (observed ~2min hangs).
   // Individual building tags give the same "are there homes nearby"
   // signal at a fraction of the query cost.
+  // Schools/hospitals/roads moved to KY Institutions + TIGERweb.
   return `[out:json][timeout:20];
 (
-  node["amenity"~"^(school|college|university)$"]${around};
-  way["amenity"~"^(school|college|university)$"]${around};
-  node["amenity"~"^(hospital|clinic|doctors|pharmacy)$"]${around};
-  way["amenity"~"^(hospital|clinic|doctors|pharmacy)$"]${around};
   node["amenity"~"^(nursing_home|social_facility)$"]${around};
   way["amenity"~"^(nursing_home|social_facility)$"]${around};
   node["building"~"^(house|residential|detached|apartments)$"]${around};
   way["building"~"^(house|residential|detached|apartments)$"]${around};
-  way["highway"~"^(motorway|trunk|primary|secondary)$"]${around};
 );
 out center tags;`;
 }
@@ -117,18 +154,12 @@ out center tags;`;
 function classify(tags) {
   const a = tags.amenity;
   const b = tags.building;
-  const h = tags.highway;
-  if (['school', 'college', 'university'].includes(a))       return 'school';
-  if (['hospital', 'clinic', 'doctors', 'pharmacy'].includes(a)) return 'medical';
   if (['nursing_home', 'social_facility'].includes(a))       return 'care_facility';
   if (['house', 'residential', 'detached', 'apartments'].includes(b)) return 'residential';
-  if (['motorway', 'trunk', 'primary', 'secondary'].includes(h)) return 'road';
   return 'other';
 }
 
 function parseElements(elements, centerLat, centerLng) {
-  const seen = new Set();
-
   return elements
     .map(el => {
       const lat = el.lat ?? el.center?.lat;
@@ -138,12 +169,6 @@ function parseElements(elements, centerLat, centerLng) {
       const tags = el.tags || {};
       const type = classify(tags);
       const name = tags.name || tags['addr:street'] || null;
-
-      // Deduplicate roads by name to avoid listing every road segment
-      if (type === 'road' && name) {
-        if (seen.has(`road:${name}`)) return null;
-        seen.add(`road:${name}`);
-      }
 
       const dist = haversine(parseFloat(centerLat), parseFloat(centerLng), lat, lng);
 
@@ -167,23 +192,71 @@ function haversine(lat1, lng1, lat2, lng2) {
 // Water Sources
 // ============================================================
 
+// Water is merged from OSM (hydrants, tanks, plus whatever hydrography is
+// mapped) and USGS 3DHP (authoritative streams + ponds, incl. unnamed farm
+// ponds). 3DHP has no hydrants/tanks, so it supplements OSM, never replaces it.
 async function getWaterSources(lat, lng, radius) {
-  const query = buildWaterQuery(lat, lng, radius);
+  const [osm, hydro] = await Promise.allSettled([
+    fetchOverpass(buildWaterQuery(lat, lng, radius)),
+    get3DHPWater(lat, lng, radius),
+  ]);
 
-  let data;
-  try {
-    data = await fetchOverpass(query);
-  } catch (err) {
-    return jsonResponse({ error: `Overpass API error: ${err.message}` }, 502);
+  if (osm.status === 'rejected' && hydro.status === 'rejected') {
+    return jsonResponse({ error: `All water sources failed (OSM: ${osm.reason.message}; 3DHP: ${hydro.reason.message})` }, 502);
   }
 
-  const sources = parseWaterElements(data.elements || [], lat, lng);
+  const warnings = [];
+  const all = [];
+  if (osm.status === 'fulfilled') {
+    all.push(...parseWaterElements(osm.value.elements || [], lat, lng));
+  } else {
+    warnings.push(`Hydrant / tank scan unavailable (OpenStreetMap: ${osm.reason.message})`);
+  }
+  if (hydro.status === 'fulfilled') {
+    all.push(...withDistance(hydro.value.features, lat, lng));
+    if (hydro.value.partial) warnings.push('USGS 3DHP returned partial results (one layer failed)');
+  } else {
+    warnings.push(`USGS hydrography unavailable (3DHP: ${hydro.reason.message})`);
+  }
+
+  const radiusMi = radius / 1609.34;
+  const sources = capWater(dedupeWater(
+    all.filter(s => s.distance_miles <= radiusMi)
+       .sort((a, b) => a.distance_miles - b.distance_miles)
+  ));
 
   return jsonResponse({
     sources,
     query_radius_m: radius,
-    source: 'OpenStreetMap via Overpass API',
+    source: 'OpenStreetMap via Overpass API, USGS 3D Hydrography Program',
+    warnings,
   });
+}
+
+const STILL_WATER = new Set(['pond', 'lake', 'reservoir', 'water']);
+const DUP_MILES   = 0.05; // ~80m — same unnamed pond reported by both sources
+
+// Input must be sorted nearest-first, so the closer copy of a duplicate wins.
+function dedupeWater(sorted) {
+  const seenNames = new Set();
+  const kept = [];
+  for (const s of sorted) {
+    if (s.type === 'hydrant' || s.type === 'tank') { kept.push(s); continue; }
+    if (s.name) {
+      // Sources disagree on pond vs lake vs reservoir for the same body —
+      // key still water by name alone, moving water by name + type.
+      const key = STILL_WATER.has(s.type) ? `still:${s.name.toLowerCase()}`
+                                          : `${s.type}:${s.name.toLowerCase()}`;
+      if (seenNames.has(key)) continue;
+      seenNames.add(key);
+    } else if (STILL_WATER.has(s.type) && kept.some(k =>
+      !k.name && STILL_WATER.has(k.type) &&
+      haversine(s.lat, s.lng, k.lat, k.lng) < DUP_MILES)) {
+      continue;
+    }
+    kept.push(s);
+  }
+  return kept;
 }
 
 function buildWaterQuery(lat, lng, radius) {
@@ -297,10 +370,9 @@ out center tags;`;
 const WATER_TYPE_CAP = 5;
 
 function parseWaterElements(elements, centerLat, centerLng) {
-  const seen    = new Set();
-  const typeCnt = {};
+  const seen = new Set();
 
-  const all = elements
+  return elements
     .map(el => {
       const lat = el.lat ?? el.center?.lat;
       const lng = el.lon ?? el.center?.lon;
@@ -323,11 +395,14 @@ function parseWaterElements(elements, centerLat, centerLng) {
       const dist = haversine(parseFloat(centerLat), parseFloat(centerLng), lat, lng);
       return { id: el.id, type, name, lat, lng, distance_miles: dist };
     })
-    .filter(Boolean)
-    .sort((a, b) => a.distance_miles - b.distance_miles);
+    .filter(Boolean);
+}
 
-  // Cap at WATER_TYPE_CAP per type (named and unnamed counted separately)
-  return all.filter(s => {
+// Cap at WATER_TYPE_CAP per type (named and unnamed counted separately).
+// Input must be sorted nearest-first.
+function capWater(sorted) {
+  const typeCnt = {};
+  return sorted.filter(s => {
     const key = `${s.type}:${s.name ? 'named' : 'unnamed'}`;
     typeCnt[key] = (typeCnt[key] || 0) + 1;
     return typeCnt[key] <= WATER_TYPE_CAP;
