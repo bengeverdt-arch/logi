@@ -8,6 +8,11 @@ import { jsonResponse } from '../cors.js';
 import { getKYInstitutions } from './kyinstitutions.js';
 import { getTIGERRoads }     from './tigerweb.js';
 import { get3DHPWater }      from './hydro3dhp.js';
+import { getFEMAResidential, FEMA_NEAREST_N } from './femastructures.js';
+import { getCMSNursingHomes } from './cms.js';
+import { getFAAHeliports }    from './faa.js';
+import { getTransmissionLines } from './transmission.js';
+import { nearestVertex }      from './arcgis.js';
 
 const OVERPASS      = 'https://overpass-api.de/api/interpreter';
 const OVERPASS_MIRROR = 'https://overpass.kumi.systems/api/interpreter'; // fallback
@@ -45,7 +50,7 @@ async function fetchOverpass(query) {
     try {
       res = await post(OVERPASS_MIRROR);
     } catch (err) {
-      throw new Error(`Overpass timed out on both primary and mirror`);
+      throw new Error(`Overpass unreachable on both primary and mirror`);
     }
   }
   if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
@@ -77,31 +82,45 @@ export async function handleOSM(request, env, url) {
   return jsonResponse({ error: 'Not found.' }, 404);
 }
 
-// Receptors are merged from three independent sources, each covering what
-// it's most reliable for:
-//   Overpass (OSM)     — care facilities + residential buildings
-//   KY Institutions    — schools + hospitals
-//   Census TIGERweb    — primary + secondary roads
+// Receptors are merged from independent sources, each covering what it's
+// most reliable for:
+//   Overpass (OSM)      — care facilities (incl. assisted living)
+//   CMS                 — certified nursing homes (official list)
+//   KY Institutions     — schools + hospitals
+//   Census TIGERweb     — primary + secondary roads
+//   FEMA USA Structures — homes (nearest N listed + total count)
 // A source that fails is named in `warnings` rather than silently dropped —
 // "no schools found" when the school source was down would be a wrong field.
 async function getReceptors(lat, lng, radius) {
-  const [osm, ky, roads] = await Promise.allSettled([
+  const [osm, cms, ky, roads, homes] = await Promise.allSettled([
     fetchOverpass(buildQuery(lat, lng, radius)),
+    getCMSNursingHomes(lat, lng, radius),
     getKYInstitutions(lat, lng, radius),
     getTIGERRoads(lat, lng, radius),
+    getFEMAResidential(lat, lng, radius),
   ]);
 
-  if ([osm, ky, roads].every(r => r.status === 'rejected')) {
-    return jsonResponse({ error: `All receptor sources failed (OSM: ${osm.reason.message}; KY: ${ky.reason.message}; TIGER: ${roads.reason.message})` }, 502);
+  const all = [osm, cms, ky, roads, homes];
+  if (all.every(r => r.status === 'rejected')) {
+    return jsonResponse({
+      error: `All receptor sources failed (${all.map(r => r.reason.message).join('; ')})`,
+    }, 502);
   }
 
   const warnings = [];
   const receptors = [];
-  if (osm.status === 'fulfilled') {
-    receptors.push(...parseElements(osm.value.elements || [], lat, lng));
+  const care = [];
+  if (cms.status === 'fulfilled') {
+    care.push(...withDistance(cms.value, lat, lng));
   } else {
-    warnings.push(`Care facility / residential scan unavailable (OpenStreetMap: ${osm.reason.message})`);
+    warnings.push(`Certified nursing home list unavailable (CMS: ${cms.reason.message})`);
   }
+  if (osm.status === 'fulfilled') {
+    care.push(...parseElements(osm.value.elements || [], lat, lng));
+  } else {
+    warnings.push(`Assisted living / care facility scan unavailable (OpenStreetMap: ${osm.reason.message})`);
+  }
+  receptors.push(...dedupeCare(care));
   if (ky.status === 'fulfilled') {
     receptors.push(...withDistance(ky.value, lat, lng));
   } else {
@@ -113,7 +132,17 @@ async function getReceptors(lat, lng, radius) {
     warnings.push(`Road scan unavailable (Census TIGERweb: ${roads.reason.message})`);
   }
 
-  // ArcGIS sources are queried by bounding box — trim the corners back to a true radius.
+  let residentialTotal = null;
+  if (homes.status === 'fulfilled') {
+    residentialTotal = homes.value.total;
+    receptors.push(...withDistance(homes.value.homes, lat, lng)
+      .sort((a, b) => a.distance_miles - b.distance_miles)
+      .slice(0, FEMA_NEAREST_N));
+  } else {
+    warnings.push(`Home scan unavailable (FEMA USA Structures: ${homes.reason.message})`);
+  }
+
+  // Bbox-queried sources — trim the corners back to a true radius.
   const radiusMi = radius / 1609.34;
   const inRange = receptors
     .filter(r => r.distance_miles <= radiusMi)
@@ -121,10 +150,24 @@ async function getReceptors(lat, lng, radius) {
 
   return jsonResponse({
     receptors: inRange,
+    residential_total: residentialTotal,
     query_radius_m: radius,
-    source: 'OpenStreetMap (care/residential), KY Institutions (schools/hospitals), Census TIGERweb (roads)',
+    source: 'OpenStreetMap + CMS (care facilities), KY Institutions (schools/hospitals), Census TIGERweb (roads), FEMA USA Structures (homes)',
     warnings,
   });
+}
+
+const CARE_DUP_MILES = 0.15; // CMS geocodes to the address, OSM to the building
+
+// Same facility from CMS and OSM — keep the first (CMS goes in first,
+// so its official name wins).
+function dedupeCare(items) {
+  const kept = [];
+  for (const it of items) {
+    if (kept.some(k => haversine(it.lat, it.lng, k.lat, k.lng) < CARE_DUP_MILES)) continue;
+    kept.push(it);
+  }
+  return kept;
 }
 
 function withDistance(items, centerLat, centerLng) {
@@ -136,26 +179,18 @@ function withDistance(items, centerLat, centerLng) {
 
 function buildQuery(lat, lng, radius) {
   const around = `(around:${radius},${lat},${lng})`;
-  // Was: node/way["landuse"="residential"] — large-polygon spatial queries
-  // are the slow part of Overpass under load (observed ~2min hangs).
-  // Individual building tags give the same "are there homes nearby"
-  // signal at a fraction of the query cost.
-  // Schools/hospitals/roads moved to KY Institutions + TIGERweb.
+  // Homes moved to FEMA USA Structures; schools/hospitals to KY
+  // Institutions; roads to TIGERweb. OSM still covers assisted living.
   return `[out:json][timeout:20];
 (
   node["amenity"~"^(nursing_home|social_facility)$"]${around};
   way["amenity"~"^(nursing_home|social_facility)$"]${around};
-  node["building"~"^(house|residential|detached|apartments)$"]${around};
-  way["building"~"^(house|residential|detached|apartments)$"]${around};
 );
 out center tags;`;
 }
 
 function classify(tags) {
-  const a = tags.amenity;
-  const b = tags.building;
-  if (['nursing_home', 'social_facility'].includes(a))       return 'care_facility';
-  if (['house', 'residential', 'detached', 'apartments'].includes(b)) return 'residential';
+  if (['nursing_home', 'social_facility'].includes(tags.amenity)) return 'care_facility';
   return 'other';
 }
 
@@ -301,56 +336,89 @@ function classifyWater(tags) {
 // Infrastructure — power lines (hazards) + helipads
 // ============================================================
 
+// Overpass is primary (it's the only source with local distribution lines).
+// When it fails, fall back to FAA heliports + federal transmission lines,
+// and say so — the transmission fallback is high-voltage only.
 async function getInfrastructure(centerLat, centerLng, hazardRadius, heliRadius) {
-  const query = buildInfraQuery(centerLat, centerLng, hazardRadius, heliRadius);
+  const warnings = [];
+  let powerlines = [];
+  let helipads = [];
+  let powerlineSource = 'OpenStreetMap';
+  let helipadSource = 'OpenStreetMap';
 
-  let data;
+  let data = null;
   try {
-    data = await fetchOverpass(query);
+    data = await fetchOverpass(buildInfraQuery(centerLat, centerLng, hazardRadius, heliRadius));
   } catch (err) {
-    return jsonResponse({ error: `Overpass API error: ${err.message}` }, 502);
+    warnings.push(`OpenStreetMap unavailable (${err.message}) — using federal backups`);
   }
 
-  const powerlines = [];
-  const helipads   = [];
-  const seenPower  = new Set();
+  if (data) {
+    const seenPower = new Set();
+    for (const el of (data.elements || [])) {
+      // Ways come back with full geometry — measure to the nearest vertex.
+      // A way's center can be miles off for a long line that passes close.
+      const pt = el.geometry
+        ? nearestVertex({ paths: [el.geometry.map(g => [g.lon, g.lat])] }, parseFloat(centerLat), parseFloat(centerLng))
+        : { lat: el.lat, lng: el.lon };
+      const lat = pt?.lat;
+      const lng = pt?.lng;
+      if (!lat || !lng) continue;
 
-  for (const el of (data.elements || [])) {
-    const lat  = el.lat ?? el.center?.lat;
-    const lng  = el.lon ?? el.center?.lon;
-    if (!lat || !lng) continue;
+      const tags = el.tags || {};
+      const dist = haversine(parseFloat(centerLat), parseFloat(centerLng), lat, lng);
 
-    const tags = el.tags || {};
-    const dist = haversine(parseFloat(centerLat), parseFloat(centerLng), lat, lng);
+      if (tags.power === 'line') {
+        const name    = tags.name || tags.ref || null;
+        const voltage = tags.voltage || null;
+        const key     = name ? `line:${name}` : `line:${el.id}`;
+        if (!seenPower.has(key)) {
+          seenPower.add(key);
+          powerlines.push({ id: el.id, name, voltage, lat, lng, distance_miles: dist });
+        }
+      }
 
-    if (tags.power === 'line') {
-      const name    = tags.name || tags.ref || null;
-      const voltage = tags.voltage || null;
-      const key     = name ? `line:${name}` : `line:${el.id}`;
-      if (!seenPower.has(key)) {
-        seenPower.add(key);
-        powerlines.push({ id: el.id, name, voltage, lat, lng, distance_miles: dist });
+      if (tags.aeroway === 'helipad') {
+        const name = tags.name || null;
+        helipads.push({ id: el.id, name, lat, lng, distance_miles: dist });
       }
     }
-
-    if (tags.aeroway === 'helipad') {
-      const name = tags.name || null;
-      helipads.push({ id: el.id, name, lat, lng, distance_miles: dist });
+  } else {
+    const [lines, heli] = await Promise.allSettled([
+      getTransmissionLines(centerLat, centerLng, hazardRadius),
+      getFAAHeliports(centerLat, centerLng, heliRadius),
+    ]);
+    if (lines.status === 'fulfilled') {
+      powerlines = withDistance(lines.value, centerLat, centerLng)
+        .filter(p => p.distance_miles <= hazardRadius / 1609.34);
+      powerlineSource = 'federal transmission line data, high-voltage only, mapped 2014–2018';
+      warnings.push('Power lines: high-voltage transmission only — local distribution lines are NOT shown. Walk the unit.');
+    } else {
+      powerlineSource = null;
+      warnings.push(`Power line scan unavailable (transmission backup: ${lines.reason.message})`);
+    }
+    if (heli.status === 'fulfilled') {
+      helipads = withDistance(heli.value, centerLat, centerLng)
+        .filter(h => h.distance_miles <= heliRadius / 1609.34);
+      helipadSource = 'FAA';
+    } else {
+      helipadSource = null;
+      warnings.push(`Helipad scan unavailable (FAA backup: ${heli.reason.message})`);
     }
   }
 
   powerlines.sort((a, b) => a.distance_miles - b.distance_miles);
   helipads.sort((a, b) => a.distance_miles - b.distance_miles);
 
-  const powerlines_total = powerlines.length;
-  const powerlinesCapped = powerlines.slice(0, 5);
-
   return jsonResponse({
-    powerlines:       powerlinesCapped,
-    powerlines_total,
+    powerlines:       powerlines.slice(0, 5),
+    powerlines_total: powerlines.length,
     helipads,
     hazard_radius_m:  hazardRadius,
     heli_radius_m:    heliRadius,
+    powerline_source: powerlineSource,
+    helipad_source:   helipadSource,
+    warnings,
   });
 }
 
@@ -363,7 +431,7 @@ function buildInfraQuery(centerLat, centerLng, hazardRadius, heliRadius) {
   node["aeroway"="helipad"]${aroundHeli};
   way["aeroway"="helipad"]${aroundHeli};
 );
-out center tags;`;
+out tags geom;`;
 }
 
 // Max named sources to return per type — keeps list useful without being overwhelming

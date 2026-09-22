@@ -47,10 +47,20 @@ export async function initReceptors({ lat, lng }, receptorLayer) {
 
   el.insertAdjacentHTML('beforeend', `
     <p class="receptors-disclaimer">
-      Receptor data sourced from OpenStreetMap, KY Institutions (user-submitted, may be mistagged),
-      and Census TIGERweb. Field verification recommended.
+      Receptor data sourced from OpenStreetMap, CMS (certified nursing homes), KY Institutions
+      (user-submitted, may be mistagged), Census TIGERweb, and FEMA USA Structures (homes, from ~2015
+      satellite imagery &mdash; newer homes missing, some barns counted). Field verification recommended.
       Do not rely solely on this tool for smoke management planning.
     </p>`);
+
+  if (data.residential_total != null) {
+    const shown = receptors.filter(r => r.type === 'residential').length;
+    el.insertAdjacentHTML('beforeend',
+      `<p style="font-size:0.72rem;margin-bottom:6px">
+        <strong>${data.residential_total.toLocaleString()}</strong> residential structures within ${radiusMi} mi
+        ${shown ? `&mdash; nearest ${shown} listed below` : ''}
+      </p>`);
+  }
 
   // A failed source means its receptor types are missing, not absent —
   // say so, or an empty list reads as "no schools nearby".

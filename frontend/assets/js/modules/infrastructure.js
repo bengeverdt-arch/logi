@@ -31,23 +31,30 @@ export async function initInfrastructure({ lat, lng }, infraLayer) {
     return;
   }
 
-  renderPowerLines(data.powerlines || [], data.hazard_radius_m, data.powerlines_total ?? data.powerlines?.length ?? 0);
-  renderHelipads(data.helipads || [], data.heli_radius_m, infraLayer);
+  (data.warnings || []).forEach(w => DIAG.err('OSM Infra', w, url));
+  const warnHtml = (match) => (data.warnings || [])
+    .filter(match)
+    .map(w => `<p class="plan-error">&#9888; ${w}</p>`).join('');
+
+  renderPowerLines(data.powerlines || [], data.hazard_radius_m, data.powerlines_total ?? data.powerlines?.length ?? 0,
+    data.powerline_source ?? 'OpenStreetMap', warnHtml(w => !/helipad/i.test(w)));
+  renderHelipads(data.helipads || [], data.heli_radius_m, infraLayer,
+    data.helipad_source ?? 'OpenStreetMap', warnHtml(w => /helipad|OpenStreetMap unavailable/i.test(w)));
 }
 
-function renderPowerLines(powerlines, radiusM, total) {
+function renderPowerLines(powerlines, radiusM, total, source, warnings) {
   const el = document.getElementById('f-powerlines');
   if (!el) return;
 
   if (!powerlines.length) {
-    el.innerHTML = '';
+    el.innerHTML = warnings;
     return;
   }
 
   const radiusMi = (radiusM / 1609.34).toFixed(1);
 
-  let html = `<div class="infra-auto-block">
-    <p class="infra-auto-label">Power lines within ${radiusMi} mi (auto &mdash; OpenStreetMap)</p>
+  let html = `${warnings}<div class="infra-auto-block">
+    <p class="infra-auto-label">Power lines within ${radiusMi} mi (auto &mdash; ${source})</p>
     <ul class="receptor-list">`;
 
   powerlines.forEach(p => {
@@ -67,27 +74,27 @@ function renderPowerLines(powerlines, radiusM, total) {
   html += `</ul>
     ${truncNote}
     <p style="font-size:0.63rem;color:var(--color-text-muted);margin:4px 0 0">
-      Verify in field. OSM power line coverage varies.
+      Verify in field. Power line coverage varies by source.
     </p>
   </div>`;
 
   el.innerHTML = html;
 }
 
-function renderHelipads(helipads, radiusM, infraLayer) {
+function renderHelipads(helipads, radiusM, infraLayer, source, warnings) {
   const el = document.getElementById('f-helipads');
   if (!el) return;
 
   if (!helipads.length) {
-    el.innerHTML = `<p style="font-size:0.78rem;color:var(--color-text-muted);font-style:italic;margin:0">
+    el.innerHTML = `${warnings}<p style="font-size:0.78rem;color:var(--color-text-muted);font-style:italic;margin:0">
       No mapped helipads within 10 mi. Identify improvised LZ manually.
     </p>`;
     return;
   }
 
   const radiusMi = (radiusM / 1609.34).toFixed(0);
-  let html = `<p style="font-size:0.68rem;color:var(--color-text-muted);margin:0 0 4px">
-    ${helipads.length} helipad${helipads.length > 1 ? 's' : ''} within ${radiusMi} mi (auto &mdash; OpenStreetMap)
+  let html = `${warnings}<p style="font-size:0.68rem;color:var(--color-text-muted);margin:0 0 4px">
+    ${helipads.length} helipad${helipads.length > 1 ? 's' : ''} within ${radiusMi} mi (auto &mdash; ${source})
   </p>
   <ul class="receptor-list">`;
 
