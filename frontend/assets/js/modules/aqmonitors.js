@@ -48,6 +48,8 @@ function haversine(lat1, lng1, lat2, lng2) {
   return parseFloat((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2));
 }
 
+const MAX_RELEVANT_MILES = 100;
+
 export function initAQMonitors({ lat, lng }) {
   const el = document.getElementById('aqmonitors-body');
   if (!el) return;
@@ -57,6 +59,20 @@ export function initAQMonitors({ lat, lng }) {
     .sort((a, b) => a.distance_miles - b.distance_miles);
 
   const nearest = ranked[0];
+
+  // The list is Kentucky-only. Outside KY the "nearest" monitor can be
+  // hundreds of miles away — show nothing rather than a wrong target, and
+  // don't let it into the VI calc or the BSMP auto-fill.
+  if (nearest.distance_miles > MAX_RELEVANT_MILES) {
+    document.dispatchEvent(new CustomEvent('aqmonitors:loaded', {
+      detail: { nearestMiles: null, nearestName: null },
+    }));
+    el.innerHTML = `<p style="font-size:0.68rem;color:var(--color-text-muted);margin:10px 0 4px">
+      AQ monitor list covers Kentucky only &mdash; none within ${MAX_RELEVANT_MILES} mi.
+      Check <a href="https://www.airnow.gov" target="_blank" rel="noopener">airnow.gov</a> for local monitors.
+    </p>`;
+    return;
+  }
 
   document.dispatchEvent(new CustomEvent('aqmonitors:loaded', {
     detail: { nearestMiles: nearest.distance_miles, nearestName: nearest.name },

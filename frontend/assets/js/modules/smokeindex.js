@@ -62,7 +62,7 @@ function render() {
   // Nearest smoke-sensitive target = closer of (OSM receptor, KDAQ AQ monitor).
   // AQ monitors count as smoke sensitive targets per KPFC guidance — an
   // Exceptional Event designation is lost if smoke reaches an unmitigated monitor.
-  const useAQ = _nearestAQMiles !== undefined
+  const useAQ = _nearestAQMiles != null // null = outside KY monitor coverage
     && (_nearestReceptorMiles === null || _nearestAQMiles < _nearestReceptorMiles);
 
   const nearestMiles = useAQ ? _nearestAQMiles : _nearestReceptorMiles;
