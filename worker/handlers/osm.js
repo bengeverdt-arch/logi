@@ -6,6 +6,7 @@
 
 import { jsonResponse } from '../cors.js';
 import { getKYInstitutions } from './kyinstitutions.js';
+import { getNCESSchools } from './nces.js';
 import { getTIGERRoads }     from './tigerweb.js';
 import { get3DHPWater }      from './hydro3dhp.js';
 import { getFEMAResidential, FEMA_NEAREST_N } from './femastructures.js';
@@ -86,21 +87,23 @@ export async function handleOSM(request, env, url) {
 // most reliable for:
 //   Overpass (OSM)      — care facilities (incl. assisted living)
 //   CMS                 — certified nursing homes (official list)
-//   KY Institutions     — schools + hospitals
+//   KY Institutions     — schools + hospitals (KY only)
+//   NCES EDGE           — public + private K-12 schools (national)
 //   Census TIGERweb     — primary + secondary roads
 //   FEMA USA Structures — homes (nearest N listed + total count)
 // A source that fails is named in `warnings` rather than silently dropped —
 // "no schools found" when the school source was down would be a wrong field.
 async function getReceptors(lat, lng, radius) {
-  const [osm, cms, ky, roads, homes] = await Promise.allSettled([
+  const [osm, cms, ky, nces, roads, homes] = await Promise.allSettled([
     fetchOverpass(buildQuery(lat, lng, radius)),
     getCMSNursingHomes(lat, lng, radius),
     getKYInstitutions(lat, lng, radius),
+    getNCESSchools(lat, lng, radius),
     getTIGERRoads(lat, lng, radius),
     getFEMAResidential(lat, lng, radius),
   ]);
 
-  const all = [osm, cms, ky, roads, homes];
+  const all = [osm, cms, ky, nces, roads, homes];
   if (all.every(r => r.status === 'rejected')) {
     return jsonResponse({
       error: `All receptor sources failed (${all.map(r => r.reason.message).join('; ')})`,
@@ -110,7 +113,7 @@ async function getReceptors(lat, lng, radius) {
   const warnings = [];
   const receptors = [];
   // Official lists first so their names win when the same facility is
-  // also in OSM. OSM covers every state; KY Institutions adds KY coverage.
+  // also in OSM. OSM + NCES cover every state; KY Institutions adds KY coverage.
   const facilities = [];
   if (cms.status === 'fulfilled') {
     facilities.push(...withDistance(cms.value, lat, lng).map(f => ({ ...f, src: 'cms' })));
@@ -121,6 +124,12 @@ async function getReceptors(lat, lng, radius) {
     facilities.push(...withDistance(ky.value, lat, lng).map(f => ({ ...f, src: 'ky' })));
   } else {
     warnings.push(`KY school / hospital list unavailable (KY Institutions: ${ky.reason.message})`);
+  }
+  if (nces.status === 'fulfilled') {
+    facilities.push(...withDistance(nces.value.schools, lat, lng).map(f => ({ ...f, src: 'nces' })));
+    nces.value.failed.forEach(msg => warnings.push(`Partial school list (${msg})`));
+  } else {
+    warnings.push(`National school list unavailable (NCES: ${nces.reason.message})`);
   }
   if (osm.status === 'fulfilled') {
     facilities.push(...parseElements(osm.value.elements || [], lat, lng).map(f => ({ ...f, src: 'osm' })));
@@ -154,7 +163,7 @@ async function getReceptors(lat, lng, radius) {
     receptors: inRange,
     residential_total: residentialTotal,
     query_radius_m: radius,
-    source: 'OpenStreetMap (schools/medical/care), CMS (nursing homes), KY Institutions (KY schools/hospitals), Census TIGERweb (roads), FEMA USA Structures (homes)',
+    source: 'OpenStreetMap (schools/medical/care), CMS (nursing homes), KY Institutions (KY schools/hospitals), NCES (K-12 schools), Census TIGERweb (roads), FEMA USA Structures (homes)',
     warnings,
   });
 }
