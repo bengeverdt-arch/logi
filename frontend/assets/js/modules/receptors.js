@@ -47,8 +47,9 @@ export async function initReceptors({ lat, lng }, receptorLayer) {
 
   el.insertAdjacentHTML('beforeend', `
     <p class="receptors-disclaimer">
-      Receptor data sourced from OpenStreetMap, CMS (certified nursing homes), KY Institutions
-      (Kentucky only; user-submitted, may be mistagged), Census TIGERweb, and FEMA USA Structures (homes, from ~2015
+      Receptor data sourced from NCES (public 2024&ndash;25 + private 2023&ndash;24 K-12 schools), CMS (certified nursing homes),
+      KY Institutions (Kentucky only; user-submitted, may be mistagged), OpenStreetMap (supplemental), Census TIGERweb (roads),
+      and FEMA USA Structures (homes, from ~2015
       satellite imagery &mdash; newer homes missing, some barns counted). Field verification recommended.
       Do not rely solely on this tool for smoke management planning.
     </p>`);

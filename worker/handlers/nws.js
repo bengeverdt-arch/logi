@@ -98,8 +98,8 @@ async function getVentilation(lat, lng) {
   const gp       = gridData.properties ?? {};
 
   // NWS units: mixingHeight in meters, transportWindSpeed in km/h
-  const mixingM      = getFirstValue(gp.mixingHeight?.values);
-  const transportKph = getFirstValue(gp.transportWindSpeed?.values);
+  const mixingM      = getCurrentValue(gp.mixingHeight?.values);
+  const transportKph = getCurrentValue(gp.transportWindSpeed?.values);
 
   const mixing_height_ft   = mixingM      != null ? Math.round(mixingM * 3.28084)       : null;
   const transport_wind_mph = transportKph != null ? Math.round(transportKph * 0.621371) : null;
@@ -108,16 +108,26 @@ async function getVentilation(lat, lng) {
     ? Math.round(mixing_height_ft * transport_wind_mph)
     : null;
 
-  const vi_class = vi == null ? null
-    : vi < 500  ? 'poor'
-    : vi < 1000 ? 'marginal'
-    : 'good';
-
-  return jsonResponse({ mixing_height_ft, transport_wind_mph, ventilation_index: vi, vi_class });
+  // No good/poor class: the old 500/1000 cutoffs didn't fit ft·mph (a VI of
+  // 6,678 read "good"). The frontend shows this number beside the VI the
+  // nearest receptor needs and leaves the call to the burn boss.
+  return jsonResponse({ mixing_height_ft, transport_wind_mph, ventilation_index: vi });
 }
 
-function getFirstValue(values) {
-  if (!Array.isArray(values) || !values.length) return null;
-  const v = values[0]?.value;
-  return (v != null && v !== 'null') ? v : null;
+// NWS gridpoint series start hours before now (e.g. 13Z at 19Z) — pick
+// the value whose validTime interval ("2026-09-23T19:00:00+00:00/PT1H")
+// covers the current time, not the first one in the list.
+function getCurrentValue(values, now = Date.now()) {
+  if (!Array.isArray(values)) return null;
+  for (const v of values) {
+    const [start, dur] = String(v.validTime || '').split('/');
+    const t0 = Date.parse(start);
+    const m  = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/.exec(dur || '');
+    if (!Number.isFinite(t0) || !m) continue;
+    const ms = ((+m[1] || 0) * 24 + (+m[2] || 0)) * 3_600_000 + (+m[3] || 0) * 60_000;
+    if (now >= t0 && now < t0 + ms) {
+      return (v.value != null && v.value !== 'null') ? v.value : null;
+    }
+  }
+  return null;
 }

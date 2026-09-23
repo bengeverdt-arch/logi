@@ -16,10 +16,7 @@ Set the following in GitHub Actions secrets:
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
 
-Set the following as Cloudflare Worker secrets:
-```
-wrangler secret put SYNOPTIC_TOKEN
-```
+No Cloudflare Worker secrets are needed — every data source is public.
 
 ### Deploy
 Push to `master` — GitHub Actions handles the rest.

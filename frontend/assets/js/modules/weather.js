@@ -1,5 +1,5 @@
 // ============================================================
-// weather.js — RAWS conditions + NWS forecast → plan sections
+// weather.js — RAWS conditions (NIFC) + NWS forecast → plan sections
 // ============================================================
 
 import { WORKER_URL }    from '../config.js';
@@ -14,7 +14,7 @@ export async function initWeather({ lat, lng }) {
   setLoading('forecast-body',   'Fetching NWS forecast');
 
   const [rawsResult, alertsResult, forecastResult, elevResult, ventResult] = await Promise.allSettled([
-    diagFetch(`${WORKER_URL}/api/synoptic?lat=${lat}&lng=${lng}`, 'SYNOPTIC'),
+    diagFetch(`${WORKER_URL}/api/raws?lat=${lat}&lng=${lng}`, 'RAWS'),
     diagFetch(`${WORKER_URL}/api/nws/alerts?lat=${lat}&lng=${lng}`, 'NWS-ALERTS'),
     diagFetch(`${WORKER_URL}/api/nws/forecast?lat=${lat}&lng=${lng}`, 'NWS-FCST'),
     diagFetch(`${WORKER_URL}/api/elevation?lat=${lat}&lng=${lng}`, 'ELEV'),
@@ -71,7 +71,7 @@ function renderConditions(result, centroidElevFt) {
     return;
   }
 
-  const { station, latest } = result.value;
+  const { station, latest, fuel_moisture_station: fmSta } = result.value;
 
   const obsDate  = latest.date_time ? new Date(latest.date_time) : null;
   const ageHours = obsDate ? (Date.now() - obsDate.getTime()) / 3_600_000 : null;
@@ -99,8 +99,13 @@ function renderConditions(result, centroidElevFt) {
       ${cell('Temp',      temp != null ? Math.round(temp) + '°F' : '—', false)}
       ${cell('RH',        rh   != null ? Math.round(rh)  + '%'  : '—', rh   != null && rh   < 25)}
       ${cell('Wind',      ws   != null ? Math.round(ws)  + ' mph' : '—', false)}
+      ${cell('Gust',      latest.wind_gust != null ? Math.round(latest.wind_gust) + ' mph' : '—', false)}
       ${cell('Direction', wd   != null ? deg2card(wd)             : '—', false)}
     </div>
+    ${fmSta ? `<p class="raws-meta">10-hr FM from ${fmSta.name} (${fmSta.distance_miles.toFixed(1)} mi) &mdash; ${station.name} has no fuel stick reading.</p>` : ''}
+    <p class="raws-meta">Source: NIFC Interagency RAWS (latest ob only)${station.history_url
+      ? ` &mdash; <a href="${station.history_url}" target="_blank" rel="noopener">station history</a>` : ''}.
+      Take on-site readings before ignition.</p>
   `;
 }
 
@@ -117,47 +122,17 @@ function deg2card(deg) {
 }
 
 // ---- Smoke / Ventilation Index ----
+// Forecast VI is displayed by smokeindex.js next to the VI the nearest
+// receptor needs. This only hands the numbers over (null = unavailable).
 function renderVentilation(result) {
-  const el = document.getElementById('smoke-vi-body');
-  if (!el) return;
-
-  if (result.status === 'rejected' || !result.value) {
-    el.innerHTML = '';
-    return;
-  }
-
-  const { mixing_height_ft, transport_wind_mph, ventilation_index: vi, vi_class } = result.value;
-
-  if (vi == null && mixing_height_ft == null) {
-    el.innerHTML = '';
-    return;
-  }
-
-  const viColor = vi_class === 'good'     ? 'var(--color-ok)'
-                : vi_class === 'marginal' ? 'var(--color-warn)'
-                : vi_class === 'poor'     ? 'var(--color-danger)'
-                : 'var(--color-text-muted)';
-
-  el.innerHTML = `
-    <div class="smoke-vi-block">
-      <div class="smoke-vi-title">Ventilation Index</div>
-      <div class="smoke-vi-row">
-        ${viCell('Mixing Height', mixing_height_ft != null ? mixing_height_ft.toLocaleString() + ' ft' : '—', 'var(--color-text)')}
-        ${viCell('Transport Wind', transport_wind_mph != null ? transport_wind_mph + ' mph' : '—', 'var(--color-text)')}
-        ${viCell('Vent. Index', vi != null ? vi.toLocaleString() : '—', viColor)}
-        ${viCell('Class', vi_class ? vi_class.toUpperCase() : '—', viColor)}
-      </div>
-      <p class="smoke-vi-note">VI = mixing height &times; transport wind &mdash; record for day-of comparison.
-        &lt;500 poor &mdash; 500&ndash;999 marginal &mdash; &ge;1000 good &mdash; Source: NWS</p>
-    </div>
-  `;
-}
-
-function viCell(label, value, color) {
-  return `<div class="smoke-vi-stat">
-    <div class="obs-label">${label}</div>
-    <div class="obs-value" style="color:${color}">${value}</div>
-  </div>`;
+  const v = result.status === 'fulfilled' ? result.value : null;
+  document.dispatchEvent(new CustomEvent('vent:loaded', {
+    detail: v ? {
+      mixing_height_ft:   v.mixing_height_ft,
+      transport_wind_mph: v.transport_wind_mph,
+      ventilation_index:  v.ventilation_index,
+    } : {},
+  }));
 }
 
 // ---- NWS Forecast ----

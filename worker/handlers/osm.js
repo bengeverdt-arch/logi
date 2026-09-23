@@ -18,18 +18,18 @@ import { nearestVertex }      from './arcgis.js';
 const OVERPASS      = 'https://overpass-api.de/api/interpreter';
 const OVERPASS_MIRROR = 'https://overpass.kumi.systems/api/interpreter'; // fallback
 
-// Overpass's own [timeout:N] only bounds its query execution — a slow or
-// queued server can still leave the HTTP connection hanging far longer
-// (observed: a receptors query hung ~2 minutes before Cloudflare's edge
-// gave up with a 524). Cut each attempt off client-side well before that
-// so a stuck request fails fast instead of leaving the page looking frozen.
-const FETCH_TIMEOUT_MS = 15000;
+// Overpass is a SUPPLEMENTAL source everywhere: federal/official sources
+// carry the load, OSM adds what only it has (distribution lines, hydrants,
+// assisted living). It has been unreliable (down most of 2026-09-22/23),
+// so it gets a hard deadline — primary and mirror are raced in parallel
+// and the whole call, including reading the body, is cut off at
+// OVERPASS_DEADLINE_MS. A slow Overpass must never hold up the plan.
+const OVERPASS_DEADLINE_MS = 8000;
 
 async function fetchOverpass(query) {
-  const post = (endpoint) => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    return fetch(endpoint, {
+  const controller = new AbortController();
+  const post = async (endpoint) => {
+    const res = await fetch(endpoint, {
       method:  'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -37,25 +37,29 @@ async function fetchOverpass(query) {
       },
       body:    `data=${encodeURIComponent(query)}`,
       signal:  controller.signal,
-    }).finally(() => clearTimeout(timer));
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
   };
 
-  let res;
-  try {
-    res = await post(OVERPASS);
-  } catch (err) {
-    res = null; // timeout/abort on primary — fall through to mirror
-  }
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error(`Overpass timed out after ${OVERPASS_DEADLINE_MS / 1000}s`));
+    }, OVERPASS_DEADLINE_MS);
+  });
 
-  if (!res || !res.ok) {
-    try {
-      res = await post(OVERPASS_MIRROR);
-    } catch (err) {
-      throw new Error(`Overpass unreachable on both primary and mirror`);
-    }
+  try {
+    return await Promise.race([
+      Promise.any([post(OVERPASS), post(OVERPASS_MIRROR)])
+        .catch(() => { throw new Error('Overpass unreachable on both primary and mirror'); }),
+      deadline,
+    ]);
+  } finally {
+    clearTimeout(timer);
+    controller.abort(); // cancel whichever request lost the race
   }
-  if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
-  return res.json();
 }
 
 export async function handleOSM(request, env, url) {
@@ -134,7 +138,7 @@ async function getReceptors(lat, lng, radius) {
   if (osm.status === 'fulfilled') {
     facilities.push(...parseElements(osm.value.elements || [], lat, lng).map(f => ({ ...f, src: 'osm' })));
   } else {
-    warnings.push(`School / hospital / care facility scan unavailable (OpenStreetMap: ${osm.reason.message})`);
+    warnings.push(`OpenStreetMap supplement unavailable (${osm.reason.message}) — assisted living, clinics, and hospitals outside KY may be missing`);
   }
   receptors.push(...dedupeAcrossSources(facilities).map(({ src, ...f }) => f));
   if (roads.status === 'fulfilled') {
@@ -166,6 +170,18 @@ async function getReceptors(lat, lng, radius) {
     source: 'OpenStreetMap (schools/medical/care), CMS (nursing homes), KY Institutions (KY schools/hospitals), NCES (K-12 schools), Census TIGERweb (roads), FEMA USA Structures (homes)',
     warnings,
   });
+}
+
+const DUP_INFRA_MILES = 0.1;
+
+// Keep the first of any two items from different sources within `miles`.
+function dedupeNear(items, miles) {
+  const kept = [];
+  for (const it of items) {
+    if (kept.some(k => k.src !== it.src && haversine(it.lat, it.lng, k.lat, k.lng) < miles)) continue;
+    kept.push(it);
+  }
+  return kept;
 }
 
 const DUP_FACILITY_MILES = 0.15; // official lists geocode to the address, OSM to the building
@@ -357,37 +373,36 @@ function classifyWater(tags) {
 // Infrastructure — power lines (hazards) + helipads
 // ============================================================
 
-// Overpass is primary (it's the only source with local distribution lines).
-// When it fails, fall back to FAA heliports + federal transmission lines,
-// and say so — the transmission fallback is high-voltage only.
+// Federal sources always run (FAA heliports, HIFLD-derived transmission
+// lines). OSM runs alongside with a hard deadline and adds what only it
+// has — local distribution lines and unregistered helipads.
 async function getInfrastructure(centerLat, centerLng, hazardRadius, heliRadius) {
   const warnings = [];
-  let powerlines = [];
-  let helipads = [];
-  let powerlineSource = 'OpenStreetMap';
-  let helipadSource = 'OpenStreetMap';
+  const cLat = parseFloat(centerLat);
+  const cLng = parseFloat(centerLng);
 
-  let data = null;
-  try {
-    data = await fetchOverpass(buildInfraQuery(centerLat, centerLng, hazardRadius, heliRadius));
-  } catch (err) {
-    warnings.push(`OpenStreetMap unavailable (${err.message}) — using federal backups`);
-  }
+  const [osm, lines, heli] = await Promise.allSettled([
+    fetchOverpass(buildInfraQuery(centerLat, centerLng, hazardRadius, heliRadius)),
+    getTransmissionLines(centerLat, centerLng, hazardRadius),
+    getFAAHeliports(centerLat, centerLng, heliRadius),
+  ]);
 
-  if (data) {
+  const osmLines = [];
+  const osmHeli  = [];
+  if (osm.status === 'fulfilled') {
     const seenPower = new Set();
-    for (const el of (data.elements || [])) {
+    for (const el of (osm.value.elements || [])) {
       // Ways come back with full geometry — measure to the nearest vertex.
       // A way's center can be miles off for a long line that passes close.
       const pt = el.geometry
-        ? nearestVertex({ paths: [el.geometry.map(g => [g.lon, g.lat])] }, parseFloat(centerLat), parseFloat(centerLng))
+        ? nearestVertex({ paths: [el.geometry.map(g => [g.lon, g.lat])] }, cLat, cLng)
         : { lat: el.lat, lng: el.lon };
       const lat = pt?.lat;
       const lng = pt?.lng;
       if (!lat || !lng) continue;
 
       const tags = el.tags || {};
-      const dist = haversine(parseFloat(centerLat), parseFloat(centerLng), lat, lng);
+      const dist = haversine(cLat, cLng, lat, lng);
 
       if (tags.power === 'line') {
         const name    = tags.name || tags.ref || null;
@@ -395,38 +410,47 @@ async function getInfrastructure(centerLat, centerLng, hazardRadius, heliRadius)
         const key     = name ? `line:${name}` : `line:${el.id}`;
         if (!seenPower.has(key)) {
           seenPower.add(key);
-          powerlines.push({ id: el.id, name, voltage, lat, lng, distance_miles: dist });
+          osmLines.push({ id: el.id, name, voltage, lat, lng, distance_miles: dist, src: 'osm' });
         }
       }
-
       if (tags.aeroway === 'helipad') {
-        const name = tags.name || null;
-        helipads.push({ id: el.id, name, lat, lng, distance_miles: dist });
+        osmHeli.push({ id: el.id, name: tags.name || null, lat, lng, distance_miles: dist, src: 'osm' });
       }
     }
   } else {
-    const [lines, heli] = await Promise.allSettled([
-      getTransmissionLines(centerLat, centerLng, hazardRadius),
-      getFAAHeliports(centerLat, centerLng, heliRadius),
-    ]);
-    if (lines.status === 'fulfilled') {
-      powerlines = withDistance(lines.value, centerLat, centerLng)
-        .filter(p => p.distance_miles <= hazardRadius / 1609.34);
-      powerlineSource = 'federal transmission line data, high-voltage only, mapped 2014–2018';
-      warnings.push('Power lines: high-voltage transmission only — local distribution lines are NOT shown. Walk the unit.');
-    } else {
-      powerlineSource = null;
-      warnings.push(`Power line scan unavailable (transmission backup: ${lines.reason.message})`);
-    }
-    if (heli.status === 'fulfilled') {
-      helipads = withDistance(heli.value, centerLat, centerLng)
-        .filter(h => h.distance_miles <= heliRadius / 1609.34);
-      helipadSource = 'FAA';
-    } else {
-      helipadSource = null;
-      warnings.push(`Helipad scan unavailable (FAA backup: ${heli.reason.message})`);
-    }
+    warnings.push(`OpenStreetMap unavailable (${osm.reason.message}) — federal sources only`);
   }
+
+  let fedLines = [];
+  if (lines.status === 'fulfilled') {
+    fedLines = withDistance(lines.value, centerLat, centerLng)
+      .filter(p => p.distance_miles <= hazardRadius / 1609.34)
+      .map(p => ({ ...p, src: 'fed' }));
+  } else {
+    warnings.push(`Transmission line scan unavailable (${lines.reason.message})`);
+  }
+  if (osm.status !== 'fulfilled') {
+    warnings.push('Power lines: high-voltage transmission only — local distribution lines are NOT shown. Walk the unit.');
+  }
+
+  let fedHeli = [];
+  if (heli.status === 'fulfilled') {
+    fedHeli = withDistance(heli.value, centerLat, centerLng)
+      .filter(h => h.distance_miles <= heliRadius / 1609.34)
+      .map(h => ({ ...h, src: 'faa' }));
+  } else {
+    warnings.push(`Helipad scan unavailable (FAA: ${heli.reason.message})`);
+  }
+
+  // Same line / pad from both sources — keep the federal record.
+  const powerlines = dedupeNear([...fedLines, ...osmLines], DUP_INFRA_MILES).map(({ src, ...p }) => p);
+  const helipads   = dedupeNear([...fedHeli, ...osmHeli], DUP_INFRA_MILES).map(({ src, ...h }) => h);
+  const powerlineSource = [lines.status === 'fulfilled' ? 'federal transmission lines (2014–2018)' : null,
+                           osm.status === 'fulfilled' ? 'OpenStreetMap (incl. distribution lines)' : null]
+                          .filter(Boolean).join(' + ') || null;
+  const helipadSource   = [heli.status === 'fulfilled' ? 'FAA' : null,
+                           osm.status === 'fulfilled' ? 'OpenStreetMap' : null]
+                          .filter(Boolean).join(' + ') || null;
 
   powerlines.sort((a, b) => a.distance_miles - b.distance_miles);
   helipads.sort((a, b) => a.distance_miles - b.distance_miles);

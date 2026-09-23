@@ -183,7 +183,7 @@ export function initPlan() {
     <section class="plan-section" id="section-conditions">
       <div class="plan-section-header">
         <span class="plan-section-title">Current Conditions</span>
-        <span class="plan-section-source">Auto &mdash; Synoptic/RAWS</span>
+        <span class="plan-section-source">Auto &mdash; NIFC RAWS</span>
       </div>
       <div class="plan-section-body" id="conditions-body">
         <p class="plan-pending">Draw a burn unit to load.</p>
@@ -290,7 +290,7 @@ export function initPlan() {
     <section class="plan-section" id="section-receptors">
       <div class="plan-section-header">
         <span class="plan-section-title">Sensitive Receptors / Smoke Management</span>
-        <span class="plan-section-source">Auto &mdash; OpenStreetMap + NWS</span>
+        <span class="plan-section-source">Auto &mdash; multiple sources</span>
       </div>
       <div class="plan-section-body">
         <div id="smoke-vi-body"></div>

@@ -11,6 +11,7 @@ let _nearestReceptorMiles = undefined; // undefined = not yet loaded
 let _nearestReceptorName  = null;
 let _nearestAQMiles       = undefined;
 let _nearestAQName        = null;
+let _forecastVent         = null; // NWS gridpoint mixing height × transport wind
 
 // Required VI (ft·mph) by distance to nearest sensitive receptor
 function requiredVI(distMi) {
@@ -42,6 +43,11 @@ export function initSmokeIndex() {
     render();
   });
 
+  document.addEventListener('vent:loaded', (e) => {
+    _forecastVent = e.detail;
+    render();
+  });
+
   document.addEventListener('input', (e) => {
     if (e.target.id === 'rx-mixing-min' || e.target.id === 'rx-transport-min') {
       render();
@@ -59,10 +65,10 @@ function render() {
   const mixVal       = parseFloat(document.getElementById('rx-mixing-min')?.value);
   const transportVal = parseFloat(document.getElementById('rx-transport-min')?.value);
 
-  // Nearest smoke-sensitive target = closer of (OSM receptor, KDAQ AQ monitor).
+  // Nearest smoke-sensitive target = closer of (receptor, ambient AQ monitor).
   // AQ monitors count as smoke sensitive targets per KPFC guidance — an
   // Exceptional Event designation is lost if smoke reaches an unmitigated monitor.
-  const useAQ = _nearestAQMiles != null // null = outside KY monitor coverage
+  const useAQ = _nearestAQMiles != null // null = no monitor found / lookup failed
     && (_nearestReceptorMiles === null || _nearestAQMiles < _nearestReceptorMiles);
 
   const nearestMiles = useAQ ? _nearestAQMiles : _nearestReceptorMiles;
@@ -114,6 +120,7 @@ function render() {
           <td class="gonogo-live">≥ ${reqStr} ft·mph</td>
           <td class="gonogo-rx">${tier}</td>
         </tr>
+        ${forecastRow()}
         ${viRow}
       </table>
       <p style="font-size:0.62rem;color:var(--color-text-muted);margin:5px 0 0">
@@ -121,4 +128,21 @@ function render() {
         Verify downwind exposure — VI alone does not account for wind direction.
       </p>
     </div>`;
+}
+
+// Forecast VI is shown as a number beside the required VI — no GO/NO-GO
+// call on it. The burn boss compares; the tool just lays the numbers out.
+function forecastRow() {
+  const v = _forecastVent;
+  if (!v || v.ventilation_index == null) {
+    return `<tr>
+      <td class="gonogo-param">NWS Forecast VI</td>
+      <td class="gonogo-rx" colspan="2" style="font-style:italic">${v ? 'Not available from NWS for this point' : 'Loading&hellip;'}</td>
+    </tr>`;
+  }
+  return `<tr>
+      <td class="gonogo-param">NWS Forecast VI</td>
+      <td class="gonogo-live">${v.ventilation_index.toLocaleString()} ft·mph</td>
+      <td class="gonogo-rx">${v.mixing_height_ft.toLocaleString()} ft &times; ${v.transport_wind_mph} mph, current hour</td>
+    </tr>`;
 }
