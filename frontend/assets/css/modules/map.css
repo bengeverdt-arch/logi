@@ -162,3 +162,39 @@
   border-color: var(--color-border) !important;
   color: var(--color-text) !important;
 }
+
+/* ---- Search pin (map.js showSearchPin) ---- */
+.search-pin { pointer-events: none; }
+.search-pin-dot {
+  position: absolute; left: 6px; top: 6px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #00e5ff; border: 2px solid #fff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}
+.search-pin-pulse {
+  position: absolute; left: 0; top: 0;
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 3px solid #00e5ff;
+  animation: search-pin-pulse 1s ease-out infinite;
+}
+.search-pin.settled .search-pin-pulse { display: none; }
+@keyframes search-pin-pulse {
+  0%   { transform: scale(0.6); opacity: 1; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+.search-pin-label {
+  background: rgba(17, 17, 17, 0.85); color: #fff;
+  border: 1px solid #00e5ff; font-size: 0.7rem; padding: 1px 6px;
+}
+.search-pin-label::before { border-top-color: #00e5ff; }
+
+/* ---- Polygon draw: first vertex (map.js DRAWVERTEX) ---- */
+.leaflet-editing-icon.first-vertex {
+  background: #39ff14 !important;
+  border: 2px solid #fff !important;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #39ff14;
+  transform-origin: center;
+  margin-left: -8px !important; margin-top: -8px !important;
+  width: 16px !important; height: 16px !important;
+}

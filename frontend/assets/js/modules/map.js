@@ -57,7 +57,15 @@ export function initMap({ onUnitDrawn }) {
   buildLayerToggle();
   buildSearch();
 
+  // Mark the first vertex so the start point is obvious on complex shapes
+  // (clicking it closes the polygon).
+  map.on(L.Draw.Event.DRAWVERTEX, (e) => {
+    const first = e.layers.getLayers()[0];
+    first?._icon?.classList.add('first-vertex');
+  });
+
   map.on(L.Draw.Event.CREATED, (e) => {
+    clearSearchPin();
     drawnItems.clearLayers();
     drawnItems.addLayer(e.layer);
     processUnit(e.layer);
@@ -164,6 +172,33 @@ function buildLayerToggle() {
   });
 }
 
+// ---- Search pin ----
+// Drops a pin where a search centered the map: pulses for a few seconds so
+// the eye finds it, then stays as a plain pin until the unit is drawn or
+// another search runs. Non-interactive, so drawing clicks pass through.
+let searchPin = null;
+
+function clearSearchPin() {
+  if (searchPin) { searchPin.remove(); searchPin = null; }
+}
+
+function showSearchPin(lat, lng, label) {
+  clearSearchPin();
+  searchPin = L.marker([lat, lng], {
+    interactive: false,
+    keyboard: false,
+    icon: L.divIcon({
+      className: 'search-pin',
+      html: '<div class="search-pin-pulse"></div><div class="search-pin-dot"></div>',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    }),
+  }).addTo(map);
+  searchPin.bindTooltip(label, { permanent: true, direction: 'top', offset: [0, -12], className: 'search-pin-label' });
+  const el = searchPin.getElement();
+  setTimeout(() => el?.classList.add('settled'), 4000);
+}
+
 function buildSearch() {
   const input  = document.getElementById('search-input');
   const btn    = document.getElementById('search-btn');
@@ -180,6 +215,7 @@ function buildSearch() {
       const lat = parseFloat(coordMatch[1]);
       const lng = parseFloat(coordMatch[2]);
       map.setView([lat, lng], 13);
+      showSearchPin(lat, lng, `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
       status.textContent = '';
       return;
     }
@@ -193,6 +229,7 @@ function buildSearch() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
       map.setView([data.lat, data.lng], 13);
+      showSearchPin(data.lat, data.lng, q);
       status.textContent = '';
     } catch (err) {
       status.textContent = err.message || 'Not found.';
