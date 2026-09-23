@@ -7,6 +7,7 @@ import { handleGeocode }     from './handlers/geocode.js';
 import { handleElevation }   from './handlers/elevation.js';
 import { handleFireDistrict } from './handlers/firedistrict.js';
 import { handleState }       from './handlers/state.js';
+import { handleAirNow }      from './handlers/airnow.js';
 
 export default {
   async fetch(request, env) {
@@ -26,6 +27,7 @@ export default {
       if (pathname.startsWith('/api/elevation'))   return handleElevation(request, env, url);
       if (pathname.startsWith('/api/firedistrict')) return handleFireDistrict(request, env, url);
       if (pathname.startsWith('/api/state'))       return handleState(request, env, url);
+      if (pathname.startsWith('/api/aqmonitors'))  return handleAirNow(request, env, url);
 
       return jsonResponse({ error: 'Not found.' }, 404);
 

@@ -1,10 +1,16 @@
 // ============================================================
-// aqmonitors.js — KY Division for Air Quality ambient monitor network
-// Static list (KPFC 2026 Annual Network Plan map). No live API —
-// station locations don't move; distance is computed client-side.
-// Coordinates sourced from EPA AQS site master list (aqs_sites.csv),
+// aqmonitors.js — nearest ambient air monitors (smoke sensitive targets)
+// National: EPA AirNow via /api/aqmonitors (hourly, real-time monitors
+// only). KY add-on: static KDAQ network list (KPFC 2026 Annual Network
+// Plan map) — supplies readable names for AirNow's site codes and adds
+// filter-based sites AirNow doesn't carry. If AirNow is down, the KY
+// list is the fallback near KY; elsewhere the plan says so.
+// KY coordinates sourced from EPA AQS site master list (aqs_sites.csv),
 // cross-checked by site name against the KPFC map, 2026-09-22.
 // ============================================================
+
+import { WORKER_URL } from '../config.js';
+import { DIAG } from './diag.js';
 
 const KY_AQ_MONITORS = [
   { name: "Carrithers Middle School", lat: 38.182435, lng: -85.574361, county: "Jefferson" },
@@ -15,9 +21,9 @@ const KY_AQ_MONITORS = [
   { name: "Northern Kentucky University", lat: 39.021881, lng: -84.47445, county: "Campbell" },
   { name: "Nature Center", lat: 38.967443, lng: -84.721363, county: "Boone" },
   { name: "Lexington Primary", lat: 38.06503, lng: -84.49761, county: "Fayette" },
-  { name: "Eastern Kentucky University", lat: 37.736349, lng: -84.291774, county: "Madison" },
+  { name: "Eastern Kentucky University", lat: 37.736349, lng: -84.291774, county: "Madison", pollutant: "Lead" },
   { name: "Worthington", lat: 38.548136, lng: -82.731163, county: "Greenup" },
-  { name: "21st and Greenup", lat: 38.47676, lng: -82.63137, county: "Boyd" },
+  { name: "21st and Greenup", lat: 38.47676, lng: -82.63137, county: "Boyd", pollutant: "PM10" },
   { name: "Ashland Primary", lat: 38.45934, lng: -82.64041, county: "Boyd" },
   { name: "Grayson Lake", lat: 38.23887, lng: -82.9881, county: "Carter" },
   { name: "Nicholasville", lat: 37.89147, lng: -84.58825, county: "Jessamine" },
@@ -26,7 +32,7 @@ const KY_AQ_MONITORS = [
   { name: "Freeman Lake", lat: 37.714513, lng: -85.878227, county: "Hardin" },
   { name: "Lewisport", lat: 37.93829, lng: -86.89719, county: "Hancock" },
   { name: "Meadow Lands", lat: 37.771671, lng: -87.055819, county: "Daviess" },
-  { name: "Sebree SO2 DRR Site", lat: 37.654381, lng: -87.511427, county: "Henderson" },
+  { name: "Sebree SO2 DRR Site", lat: 37.654381, lng: -87.511427, county: "Henderson", pollutant: "SO2" },
   { name: "Smithland", lat: 37.155392, lng: -88.394024, county: "Livingston" },
   { name: "Paducah Transit", lat: 37.08727, lng: -88.60801, county: "McCracken" },
   { name: "Pennyrile Forest", lat: 37.057818, lng: -87.649809, county: "Christian" },
@@ -49,58 +55,126 @@ function haversine(lat1, lng1, lat2, lng2) {
 }
 
 const MAX_RELEVANT_MILES = 100;
+const SHOWN = 3;
+// AirNow and KDAQ geocode the same site slightly differently (FIVCO vs
+// Ashland Primary 0.35 mi, HAZ2 vs Hazard 0.60 mi) — treat anything this
+// close as one. 21st & Greenup (1.2 mi from FIVCO) is a separate site.
+const SAME_SITE_MILES = 0.75;
 
-export function initAQMonitors({ lat, lng }) {
+async function fetchAirNow(lat, lng) {
+  const url = `${WORKER_URL}/api/aqmonitors?lat=${lat}&lng=${lng}`;
+  try {
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    DIAG.ok('AQ Monitors', `${data.monitors.length} EPA AirNow monitors within ${data.radius_miles} mi`);
+    return { monitors: data.monitors, error: null };
+  } catch (err) {
+    DIAG.err('AQ Monitors', err.message, url);
+    return { monitors: null, error: err.message };
+  }
+}
+
+// KY entries rename the matching AirNow site (NICHVILL → Nicholasville)
+// and keep its live readings; KY sites with no AirNow match are added.
+function mergeKY(epa, ky) {
+  const merged = epa.map(m => ({ ...m }));
+  for (const k of ky) {
+    const match = merged.find(m =>
+      haversine(m.lat, m.lng, k.lat, k.lng) < SAME_SITE_MILES);
+    if (match) {
+      match.name = k.name;
+      match.county = k.county;
+    } else {
+      merged.push({ ...k });
+    }
+  }
+  return merged.sort((a, b) => a.distance_miles - b.distance_miles);
+}
+
+function label(m) {
+  return m.county ? `${m.name} (${m.county} Co.)` : m.name;
+}
+
+function readings(m) {
+  const parts = [];
+  if (m.pm25_aqi  != null) parts.push(`PM2.5 AQI ${m.pm25_aqi}`);
+  if (m.ozone_aqi != null) parts.push(`O3 AQI ${m.ozone_aqi}`);
+  if (!parts.length) return '';
+  const time = m.observed ? ` @ ${m.observed.replace(/:00 GMT/, ' GMT').slice(11)}` : '';
+  return `current: ${parts.join(' · ')}${time}`;
+}
+
+function note(text) {
+  return `<p style="font-size:0.62rem;color:var(--color-text-muted);margin:2px 0 0">${text}</p>`;
+}
+
+function publish(nearest) {
+  document.dispatchEvent(new CustomEvent('aqmonitors:loaded', {
+    detail: nearest
+      ? { nearestMiles: nearest.distance_miles, nearestName: label(nearest) }
+      : { nearestMiles: null, nearestName: null },
+  }));
+}
+
+export async function initAQMonitors({ lat, lng }) {
   const el = document.getElementById('aqmonitors-body');
   if (!el) return;
+  el.innerHTML = '<p class="plan-pending">Loading air monitors&hellip;</p>';
 
-  const ranked = KY_AQ_MONITORS
+  const kyNear = KY_AQ_MONITORS
     .map(m => ({ ...m, distance_miles: haversine(lat, lng, m.lat, m.lng) }))
-    .sort((a, b) => a.distance_miles - b.distance_miles);
+    .filter(m => m.distance_miles <= MAX_RELEVANT_MILES);
 
-  const nearest = ranked[0];
+  const epa = await fetchAirNow(lat, lng);
+  const ranked = mergeKY(epa.monitors || [], kyNear);
+  const nearest = ranked[0] || null;
+  publish(nearest);
 
-  // The list is Kentucky-only. Outside KY the "nearest" monitor can be
-  // hundreds of miles away — show nothing rather than a wrong target, and
-  // don't let it into the VI calc or the BSMP auto-fill.
-  if (nearest.distance_miles > MAX_RELEVANT_MILES) {
-    document.dispatchEvent(new CustomEvent('aqmonitors:loaded', {
-      detail: { nearestMiles: null, nearestName: null },
-    }));
+  const notes = [];
+  if (epa.error) {
+    notes.push(`<strong>EPA AirNow monitor list unavailable</strong> (${epa.error}).` +
+      (kyNear.length ? ' Showing KY list only.' : ''));
+  }
+  if (kyNear.length) {
+    notes.push('KY sites per KDAQ 2026 Annual Network Plan (KPFC Air Quality Update, Sep 2026). ' +
+      'Verify against current KDAQ site list before relying on for Exceptional Event documentation.');
+  }
+
+  if (!nearest) {
+    // Down ≠ none: don't let an outage read as "no monitors nearby".
     el.innerHTML = `<p style="font-size:0.68rem;color:var(--color-text-muted);margin:10px 0 4px">
-      AQ monitor list covers Kentucky only &mdash; none within ${MAX_RELEVANT_MILES} mi.
+      ${epa.error ? 'Could not check for air monitors.' : `No air monitors found within ${MAX_RELEVANT_MILES} mi.`}
       Check <a href="https://www.airnow.gov" target="_blank" rel="noopener">airnow.gov</a> for local monitors.
-    </p>`;
+    </p>${notes.map(note).join('')}`;
     return;
   }
 
-  document.dispatchEvent(new CustomEvent('aqmonitors:loaded', {
-    detail: { nearestMiles: nearest.distance_miles, nearestName: nearest.name },
-  }));
-
   el.innerHTML = `
     <p style="font-size:0.68rem;color:var(--color-text-muted);margin:10px 0 4px">
-      Nearest KDAQ ambient air monitors — treat as smoke sensitive targets (KPFC Air Quality Update, Sep 2026)
+      Nearest ambient air monitors &mdash; treat as smoke sensitive targets
     </p>
     <ul class="receptor-list">
-      ${ranked.slice(0, 3).map(m => `
+      ${ranked.slice(0, SHOWN).map(m => `
         <li class="receptor-item">
-          <span class="receptor-badge other">AQ Monitor</span>
-          <span class="receptor-name">${m.name} (${m.county} Co.)</span>
+          <span class="receptor-badge other">AQ Monitor${m.temporary ? ' &middot; Temporary' : ''}${m.pollutant ? ` &middot; ${m.pollutant}` : ''}</span>
+          <span class="receptor-name">${label(m)}${readings(m) ? `<br><span style="font-size:0.62rem;color:var(--color-text-muted)">${readings(m)}</span>` : ''}</span>
           <span class="receptor-dist">${m.distance_miles} mi</span>
         </li>`).join('')}
     </ul>
-    <p style="font-size:0.62rem;color:var(--color-text-muted);margin:2px 0 0">
-      Static list, 29 stations statewide, per KDAQ 2026 Annual Network Plan. Verify against current KDAQ site list before relying on for Exceptional Event documentation.
-    </p>`;
+    ${note(epa.error
+      ? 'Source: KDAQ network list (no live readings).'
+      : 'Source: EPA AirNow (latest hour, real-time monitors)' + (kyNear.length ? ' + KDAQ network list.' : '.') +
+        ' AQI values are the current hourly reading, not a forecast.')}
+    ${notes.map(note).join('')}`;
 
   // Auto-fill BSMP checklist notes (items 1 and 2) — data only, no judgment
   const dispersionNote = document.getElementById('bsmp-note-0');
   if (dispersionNote && !dispersionNote.value.trim()) {
-    dispersionNote.value = `Nearest AQ monitor: ${nearest.name} (${nearest.county} Co.) — ${nearest.distance_miles} mi`;
+    dispersionNote.value = `Nearest AQ monitor: ${label(nearest)} — ${nearest.distance_miles} mi`;
   }
   const monitoringNote = document.getElementById('bsmp-note-1');
   if (monitoringNote && !monitoringNote.value.trim()) {
-    monitoringNote.value = `Watch: ${nearest.name} (${nearest.county} Co.) — ${nearest.distance_miles} mi. Check https://www.airnow.gov before, during, after burn.`;
+    monitoringNote.value = `Watch: ${label(nearest)} — ${nearest.distance_miles} mi. Check https://www.airnow.gov before, during, after burn.`;
   }
 }
