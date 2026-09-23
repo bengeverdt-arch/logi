@@ -252,7 +252,10 @@ export function initPlan() {
           <textarea class="field-textarea" placeholder="Location and size of designated safety zones..."></textarea>
 
           <span class="field-label">Nearest Hospital</span>
-          <input class="field-input" id="f-nearest-hospital" type="text" placeholder="Name, address, distance from unit">
+          <div>
+            <input class="field-input" id="f-nearest-hospital" type="text" placeholder="Name, address, distance from unit">
+            <div id="f-hospitals"></div>
+          </div>
 
           <span class="field-label">Emergency Contacts</span>
           <textarea class="field-textarea" placeholder="911, poison control, agency safety officer, aviation if applicable..."></textarea>
@@ -660,31 +663,66 @@ export function initPlan() {
 
   `;
 
-  document.getElementById('btn-print').addEventListener('click', () => {
-    const rxIds = [
-      'rx-wind-min', 'rx-wind-max', 'rx-wind-dir',
-      'rx-rh-min',   'rx-rh-max',
-      'rx-temp-min', 'rx-temp-max',
-      'rx-fm10-min', 'rx-fm10-max',
-      'rx-fm100-min','rx-fm100-max',
-      'rx-mixing-min','rx-transport-min',
-    ];
+  document.getElementById('btn-print').addEventListener('click', () => window.print());
+  // beforeprint also covers Ctrl+P, not just the button.
+  window.addEventListener('beforeprint', preparePrint);
+  window.addEventListener('afterprint', cleanupPrint);
+}
 
-    const flags = [];
-    rxIds.forEach(id => {
-      const el = document.getElementById(id);
-      if (el && !el.value.trim()) {
-        const flag = document.createElement('span');
-        flag.className = 'rx-not-set';
-        flag.textContent = 'NOT SET';
-        el.insertAdjacentElement('afterend', flag);
-        flags.push(flag);
-      }
-    });
+const RX_IDS = new Set([
+  'rx-wind-min', 'rx-wind-max', 'rx-wind-dir',
+  'rx-rh-min',   'rx-rh-max',
+  'rx-temp-min', 'rx-temp-max',
+  'rx-fm10-min', 'rx-fm10-max',
+  'rx-fm100-min','rx-fm100-max',
+  'rx-mixing-min','rx-transport-min',
+]);
 
-    window.addEventListener('afterprint', () => flags.forEach(f => f.remove()), { once: true });
-    window.print();
+let _printExtras = [];
+
+// Inputs and fixed-height textareas clip long text on paper. For print,
+// each one is hidden and a plain text copy takes its place — the copy
+// lands in the input's own grid cell (a display:none input leaves the
+// grid), so rows never shift. Empty prescription fields print NOT SET.
+function preparePrint() {
+  cleanupPrint();
+  const plan = document.getElementById('burn-plan');
+  plan.querySelectorAll('input.field-input, textarea.field-textarea').forEach(el => {
+    const empty = !el.value.trim();
+    const copy = document.createElement('div');
+    copy.className = 'print-copy';
+    if (empty && RX_IDS.has(el.id)) {
+      copy.classList.add('rx-not-set');
+      copy.textContent = 'NOT SET';
+    } else if (empty) {
+      copy.classList.add('print-copy-empty');
+      copy.textContent = el.placeholder || '';
+    } else {
+      copy.textContent = el.type === 'date' ? fmtDate(el.value) : el.value;
+    }
+    el.classList.add('print-hidden');
+    el.insertAdjacentElement('afterend', copy);
+    _printExtras.push(() => { copy.remove(); el.classList.remove('print-hidden'); });
   });
+  // Range min/max boxes sit inside a flex row — a flag beside them is safe.
+  plan.querySelectorAll('.field-range input').forEach(el => {
+    if (!RX_IDS.has(el.id) || el.value.trim()) return;
+    const flag = document.createElement('span');
+    flag.className = 'rx-not-set';
+    flag.textContent = 'NOT SET';
+    el.insertAdjacentElement('afterend', flag);
+    _printExtras.push(() => flag.remove());
+  });
+}
+
+function cleanupPrint() {
+  _printExtras.forEach(undo => undo());
+  _printExtras = [];
+}
+
+function fmtDate(iso) {
+  const [y, m, d] = iso.split('-');
+  return y && m && d ? `${m}/${d}/${y}` : iso;
 }
 
 export function updateUnitFields({ acres, lat, lng }) {

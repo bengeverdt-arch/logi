@@ -11,19 +11,23 @@ import { initWaterSources }           from './modules/watersources.js';
 import { initInfrastructure }         from './modules/infrastructure.js';
 import { initFireDept }               from './modules/firedept.js';
 import { initUnitState }              from './modules/unitstate.js';
+import { initHospitals }              from './modules/hospitals.js';
 import { initGoNoGo, runGoNoGo }      from './modules/gonogo.js';
 import { initLandStatus }             from './modules/landstatus.js';
 import { initSmokeIndex }             from './modules/smokeindex.js';
 import { initDiag }                   from './modules/diag.js';
+import { initLoading, startRun, track } from './modules/loading.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   initPlan();
   initGoNoGo();
   initSmokeIndex();
   initDiag();
+  initLoading();
 
   initMap({
     onUnitDrawn: (unit) => {
+      startRun();
       if (!unit) {
         // Unit deleted — reset data sections
         ['landstatus-body', 'conditions-body', 'forecast-body', 'receptors-body', 'aqmonitors-body'].forEach(id => {
@@ -38,6 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fWater) fWater.innerHTML = '<p class="plan-pending">Draw a burn unit to load.</p>';
         const fHelipads = document.getElementById('f-helipads');
         if (fHelipads) fHelipads.innerHTML = '<p class="plan-pending">Draw a burn unit to load.</p>';
+        const fHospitals = document.getElementById('f-hospitals');
+        if (fHospitals) fHospitals.innerHTML = '';
         const fPowerlines = document.getElementById('f-powerlines');
         if (fPowerlines) fPowerlines.innerHTML = '';
         document.getElementById('f-acres')?.classList.add('pending');
@@ -49,14 +55,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       updateUnitFields(unit);
-      initLandStatus(unit);
-      initWeather(unit);
-      initReceptors(unit, getReceptorLayer());
-      initAQMonitors(unit);
-      initWaterSources(unit, getWaterLayer());
-      initInfrastructure(unit, getInfraLayer());
-      initFireDept(unit);
-      initUnitState(unit);
+      track('Land status',                   initLandStatus(unit));
+      track('Weather, RAWS & forecast',      initWeather(unit));
+      track('Sensitive receptors',           initReceptors(unit, getReceptorLayer()));
+      track('Air quality monitors',          initAQMonitors(unit));
+      track('Water sources',                 initWaterSources(unit, getWaterLayer()));
+      track('Power lines & helipads',        initInfrastructure(unit, getInfraLayer()));
+      track('Fire department',               initFireDept(unit));
+      track('State',                         initUnitState(unit));
+      track('Hospitals',                     initHospitals(unit));
     },
   });
 });

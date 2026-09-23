@@ -19,7 +19,7 @@ const CACHE_TTL_S = 86400;
 const PAGE = 1500;
 
 // A burn near a state line can have receptors on both sides.
-async function statesInRange(lat, lng, radiusMeters) {
+export async function statesInRange(lat, lng, radiusMeters) {
   const data = await queryArcGIS(STATES_URL, {
     geometry: envelope(lat, lng, radiusMeters),
     geometryType: 'esriGeometryEnvelope',

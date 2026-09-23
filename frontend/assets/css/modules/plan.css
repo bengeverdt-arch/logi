@@ -467,6 +467,7 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     margin-left: 6px;
+    white-space: nowrap;
   }
 }
 
@@ -584,4 +585,61 @@
   .gonogo-badge.nogo   { color: #c62828; border-color: #c62828; background: #ffebee; }
   .gonogo-badge.manual { color: #8a6200; border-color: #8a6200; background: transparent; }
   .gonogo-badge.nodata { color: #777;    border-color: #ccc;    background: transparent; }
+}
+
+/* ---- Loading bar (loading.js) ----
+   Sits above the scrolling plan, so it stays in view. Hidden when
+   nothing is loading. */
+#loading-bar {
+  flex: none;
+  background: rgba(200, 70, 10, 0.12);
+  border-bottom: 2px solid var(--color-accent);
+  padding: 8px 16px 6px;
+}
+#loading-bar[hidden] { display: none; }
+.loading-bar-text {
+  font-size: 0.78rem;
+  color: var(--color-text);
+  margin-bottom: 6px;
+}
+.loading-bar-text strong { color: var(--color-accent); }
+.loading-bar-track {
+  height: 6px;
+  background: var(--color-surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.loading-bar-fill {
+  height: 100%;
+  background: var(--color-accent);
+  transition: width 0.3s ease;
+}
+
+/* ---- Print copies (plan.js preparePrint) ---- */
+.print-copy, .print-loading-banner { display: none; }
+
+@media print {
+  #loading-bar { display: none !important; }
+  .print-hidden { display: none !important; }
+  .print-copy {
+    display: block;
+    border: 1px solid #aaa;
+    padding: 3px 8px;
+    font-size: 0.88rem;
+    color: #000;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    min-height: 1.4em;
+  }
+  .print-copy.print-copy-empty { color: #888; font-style: italic; }
+  .print-copy.rx-not-set { display: block; margin-left: 0; font-size: 0.75rem; }
+  .print-loading-banner {
+    display: block;
+    border: 2px solid #cc0000;
+    color: #cc0000;
+    font-weight: bold;
+    padding: 8pt 12pt;
+    margin: 0 0 10pt;
+  }
+  .plan-loading::before { content: '⚠ STILL LOADING WHEN PRINTED — '; color: #cc0000; font-style: normal; font-weight: bold; }
 }

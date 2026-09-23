@@ -120,7 +120,7 @@ function publish(nearest) {
 export async function initAQMonitors({ lat, lng }) {
   const el = document.getElementById('aqmonitors-body');
   if (!el) return;
-  el.innerHTML = '<p class="plan-pending">Loading air monitors&hellip;</p>';
+  el.innerHTML = '<p class="plan-loading">Loading air monitors</p>';
 
   const kyNear = KY_AQ_MONITORS
     .map(m => ({ ...m, distance_miles: haversine(lat, lng, m.lat, m.lng) }))

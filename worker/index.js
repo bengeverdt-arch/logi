@@ -8,6 +8,7 @@ import { handleFireDistrict } from './handlers/firedistrict.js';
 import { handleState }       from './handlers/state.js';
 import { handleAirNow }      from './handlers/airnow.js';
 import { handleRAWS }        from './handlers/raws.js';
+import { handleHospitals }   from './handlers/hospitals.js';
 
 export default {
   async fetch(request, env) {
@@ -20,6 +21,7 @@ export default {
 
     try {
       if (pathname.startsWith('/api/raws'))        return handleRAWS(request, env, url);
+      if (pathname.startsWith('/api/hospitals'))   return handleHospitals(request, env, url);
       if (pathname.startsWith('/api/nws'))         return handleNWS(request, env, url);
       if (pathname.startsWith('/api/osm'))         return handleOSM(request, env, url);
       if (pathname.startsWith('/api/landstatus'))  return handleLandStatus(request, env, url);
