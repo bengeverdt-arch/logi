@@ -90,7 +90,7 @@ function renderConditions(result, centroidElevFt) {
 
   el.innerHTML = `
     <div class="raws-name">${station.name}</div>
-    <div class="raws-meta">${station.stid} &mdash; ${station.distance_miles?.toFixed(1) ?? '?'} mi from centroid &mdash; Elev: ${elevDisplay}</div>
+    <div class="raws-meta">${station.stid ? `Station ID ${station.stid} &mdash; ` : ''} ${station.distance_miles?.toFixed(1) ?? '?'} mi from centroid &mdash; Elev: ${elevDisplay}</div>
     <div class="raws-timestamp ${stale ? 'stale' : 'fresh'}">
       ${stale ? '⚠ STALE &mdash; ' : ''}Last obs: ${timeStr}
     </div>

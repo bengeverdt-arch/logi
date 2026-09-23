@@ -165,7 +165,8 @@ export async function initWaterSources({ lat, lng }, waterLayer) {
     if (unnamed.length) {
       const note = document.createElement('p');
       note.style.cssText = 'font-size:0.63rem;color:var(--color-text-muted);margin:2px 0 0;font-style:italic';
-      note.textContent = `+${unnamed.length} unnamed — shown on map`;
+      // items are sorted nearest-first, so unnamed[0] is the closest
+      note.textContent = `+${unnamed.length} unnamed, nearest ${unnamed[0].distance_miles} mi — shown on map`;
       groupDiv.appendChild(note);
     }
 
@@ -174,6 +175,6 @@ export async function initWaterSources({ lat, lng }, waterLayer) {
 
   el.insertAdjacentHTML('beforeend', `
     <p style="font-size:0.65rem;color:var(--color-text-muted);margin-top:8px;margin-bottom:0">
-      Source: OpenStreetMap. Verify access, capacity, and ownership before ignition.
+      Source: ${data.source || 'OpenStreetMap'}. Verify access, capacity, and ownership before ignition.
     </p>`);
 }

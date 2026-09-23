@@ -69,7 +69,8 @@ export async function handleRAWS(request, env, url) {
       const a = f.attributes;
       return {
         station: {
-          stid:           a.WXID || a.NWSID || null,
+          // NWSID is the station ID FEMS and NWS fire weather use (e.g. 150703)
+          stid:           a.NWSID || a.WXID || null,
           name:           a.StationName,
           lat:            f.geometry.y,
           lng:            f.geometry.x,

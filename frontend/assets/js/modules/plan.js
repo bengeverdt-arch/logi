@@ -696,7 +696,7 @@ function preparePrint() {
       copy.textContent = 'NOT SET';
     } else if (empty) {
       copy.classList.add('print-copy-empty');
-      copy.textContent = el.placeholder || '';
+      copy.textContent = el.placeholder || (el.type === 'date' ? 'mm/dd/yyyy' : '');
     } else {
       copy.textContent = el.type === 'date' ? fmtDate(el.value) : el.value;
     }

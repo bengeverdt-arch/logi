@@ -300,7 +300,10 @@ async function getWaterSources(lat, lng, radius) {
   return jsonResponse({
     sources,
     query_radius_m: radius,
-    source: 'OpenStreetMap via Overpass API, USGS 3D Hydrography Program',
+    // Name only the sources that actually answered.
+    source: [osm.status === 'fulfilled' ? 'OpenStreetMap (hydrants, tanks, mapped water)' : null,
+             hydro.status === 'fulfilled' ? 'USGS 3D Hydrography Program (streams, ponds)' : null]
+            .filter(Boolean).join(' + '),
     warnings,
   });
 }
