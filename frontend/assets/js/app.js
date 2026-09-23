@@ -2,7 +2,7 @@
 // app.js — bootstrapper
 // ============================================================
 
-import { initPlan, updateUnitFields } from './modules/plan.js';
+import { initPlan, updateUnitFields, showStateAddOns } from './modules/plan.js';
 import { initMap, getReceptorLayer, getWaterLayer, getInfraLayer } from './modules/map.js';
 import { initWeather }                from './modules/weather.js';
 import { initReceptors }              from './modules/receptors.js';
@@ -10,6 +10,7 @@ import { initAQMonitors }             from './modules/aqmonitors.js';
 import { initWaterSources }           from './modules/watersources.js';
 import { initInfrastructure }         from './modules/infrastructure.js';
 import { initFireDept }               from './modules/firedept.js';
+import { initUnitState }              from './modules/unitstate.js';
 import { initGoNoGo, runGoNoGo }      from './modules/gonogo.js';
 import { initLandStatus }             from './modules/landstatus.js';
 import { initSmokeIndex }             from './modules/smokeindex.js';
@@ -31,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const smokeVi = document.getElementById('smoke-vi-body');
         if (smokeVi) smokeVi.innerHTML = '';
+        showStateAddOns(null);
         runGoNoGo();
         const fWater = document.getElementById('f-water');
         if (fWater) fWater.innerHTML = '<p class="plan-pending">Draw a burn unit to load.</p>';
@@ -54,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
       initWaterSources(unit, getWaterLayer());
       initInfrastructure(unit, getInfraLayer());
       initFireDept(unit);
+      initUnitState(unit);
     },
   });
 });

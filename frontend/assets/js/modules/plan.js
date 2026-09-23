@@ -304,57 +304,75 @@ export function initPlan() {
     </section>
 
     <!-- BSMP CHECKLIST -->
+    <!-- Titles, order, benefit and timing verbatim from 40 CFR 50.14 Table 1
+         (checked against eCFR 2026-09-23). KY/KPFC notes are an add-on,
+         shown only when the unit is in KY (see showStateAddOns). -->
     <section class="plan-section" id="section-bsmp">
       <div class="plan-section-header">
         <span class="plan-section-title">Basic Smoke Management Practices</span>
-        <span class="plan-section-source">KPFC BSMP Checklist</span>
+        <span class="plan-section-source">EPA BSMP &mdash; 40 CFR 50.14 Table 1</span>
       </div>
       <div class="plan-section-body">
         <div class="checklist">
           ${[
             {
-              title: 'Evaluation of Smoke Dispersion Conditions',
-              hint: 'Fuel type/loading, probable smoke-impact areas, smoke sensitive targets, meteorological criteria.',
+              title: 'Evaluate Smoke Dispersion Conditions',
+              hint: 'Minimize smoke impacts.',
+              when: 'Before, During, After',
+              kyHint: 'Fuel type/loading, probable smoke-impact areas, smoke sensitive targets, meteorological criteria.',
               noteId: 'bsmp-note-0',
               notePlaceholder: 'Smoke sensitive targets, dispersion conditions...',
             },
             {
-              title: 'Monitoring Effects on Air Quality',
-              hint: 'Check AirNow forecasts/conditions, track smoke transport before, during, after fire.',
+              title: 'Monitor Effects on Air Quality',
+              hint: 'Be aware of where the smoke is going and degree it impacts air quality.',
+              when: 'Before, During, After',
+              kyHint: 'Check AirNow forecasts/conditions, track smoke transport before, during, after fire.',
               noteId: 'bsmp-note-1',
               notePlaceholder: 'Nearest AQ monitor, forecast checked...',
             },
             {
-              title: 'Communication / Public Notification',
-              hint: 'KDF/KDAQ (24-hr notice required), emergency personnel, general public health messaging.',
+              title: 'Record-Keeping / Maintain a Burn/Smoke Journal',
+              hint: 'Retain information about the weather, burn and smoke. If air quality problems occur, documentation helps analyze and address air regulatory issues.',
+              when: 'Before, During, After',
+              kyHint: 'Burn plan, post-burn report, burn journal/log, record keeping.',
+              noteId: 'bsmp-note-5',
+              notePlaceholder: 'Reference notes...',
+              noteValue: 'Captured in this plan’s Objectives, Test Fire, Monitoring, and Post-burn Activities sections.',
+            },
+            {
+              title: 'Communication &mdash; Public Notification',
+              hint: 'Notify neighbors and those potentially impacted by smoke, especially sensitive receptors.',
+              when: 'Before, During',
+              kyHint: 'KDF/KDAQ (24-hr notice required), emergency personnel, general public health messaging.',
               noteId: 'bsmp-note-2',
               notePlaceholder: 'Public notice text, notification method/date...',
               noteIsTextarea: true,
             },
             {
-              title: 'Consideration of Other Emission Reduction Techniques',
-              hint: 'Reduce burn area/fuel load, change fuel, increase combustion efficiency — is fire necessary to meet objectives?',
+              title: 'Consider Emission Reduction Techniques',
+              hint: 'Reducing emissions through mechanisms such as reducing fuel loading can reduce downwind impacts.',
+              when: 'Before, During, After',
+              kyHint: 'Reduce burn area/fuel load, change fuel, increase combustion efficiency — is fire necessary to meet objectives?',
               noteId: 'bsmp-note-3',
               notePlaceholder: 'Techniques considered...',
             },
             {
-              title: 'Coordination of Area Burning / Sharing the Airshed',
-              hint: 'Formal procedures between agencies, informal coordination among practitioners.',
+              title: 'Share the Airshed &mdash; Coordination of Area Burning',
+              hint: 'Coordinate multiple burns in the area to manage exposure of the public to smoke.',
+              when: 'Before, During, After',
+              kyHint: 'Formal procedures between agencies, informal coordination among practitioners.',
               noteId: 'bsmp-note-4',
               notePlaceholder: 'Other burns in area, coordination notes...',
-            },
-            {
-              title: 'Documentation / Journaling',
-              hint: 'Burn plan, post-burn report, burn journal/log, record keeping.',
-              noteId: 'bsmp-note-5',
-              notePlaceholder: 'Reference notes...',
-              noteValue: 'Captured in this plan’s Objectives, Test Fire, Monitoring, and Post-burn Activities sections.',
             },
           ].map((item, i) => `
           <div class="checklist-item">
             <label class="check-cb">
               <input type="checkbox" id="bsmp-${i}">
-              <span class="check-text"><strong>${item.title}</strong><br><span style="font-size:0.68rem;color:var(--color-text-muted)">${item.hint}</span></span>
+              <span class="check-text"><strong>${item.title}</strong>
+                <span style="font-size:0.6rem;color:var(--color-text-muted);border:1px solid var(--color-border);border-radius:3px;padding:0 4px;margin-left:4px;white-space:nowrap">${item.when}</span><br>
+                <span style="font-size:0.68rem;color:var(--color-text-muted)">${item.hint}</span>
+                <span class="state-addon" data-state="KY" hidden><br><span style="font-size:0.68rem;color:var(--color-text-muted)">KY (KPFC): ${item.kyHint}</span></span></span>
             </label>
           </div>
           <div class="plan-fields" style="margin:2px 0 10px 26px">
@@ -371,7 +389,12 @@ export function initPlan() {
           <input class="field-input" type="date">
         </div>
         <p style="font-size:0.62rem;color:var(--color-text-muted);margin-top:8px">
-          Use is not mandatory, but BSMPs used must be documented for each burn. KPFC BSMP Checklist, updated 9/4/2026.
+          Per 40 CFR 50.14(b)(3)(ii), a State either certifies a smoke management program or relies on the burn manager&rsquo;s
+          documented use of appropriate BSMPs. If your State has a certified smoke management program, follow it.
+          EPA: this list &ldquo;is not intended to be all-inclusive. Not all BSMP are appropriate for all burns.&rdquo;
+        </p>
+        <p class="state-addon" data-state="KY" hidden style="font-size:0.62rem;color:var(--color-text-muted);margin-top:4px">
+          Kentucky: use is not mandatory, but BSMPs used must be documented for each burn. KPFC BSMP Checklist, updated 9/4/2026.
         </p>
       </div>
     </section>
@@ -667,6 +690,14 @@ export function initPlan() {
 export function updateUnitFields({ acres, lat, lng }) {
   setAuto('f-acres',  `${acres} acres`);
   setAuto('f-coords', `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+}
+
+// State-specific add-ons (e.g. KY / KPFC notes) are hidden until the
+// unit is known to be in that state. Pass null to hide them all.
+export function showStateAddOns(state) {
+  document.querySelectorAll('.state-addon').forEach(el => {
+    el.hidden = el.dataset.state !== state;
+  });
 }
 
 export function updateLocation(locationStr) {

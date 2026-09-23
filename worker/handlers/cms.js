@@ -10,10 +10,9 @@
 // ============================================================
 
 import { envelope, queryArcGIS } from './arcgis.js';
+import { STATES_URL } from './state.js';
 
 const CMS_URL = 'https://data.cms.gov/provider-data/api/1/datastore/query/4pq5-n9py/0';
-const STATES_URL =
-  'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/0/query';
 
 const FETCH_TIMEOUT_MS = 15000;
 const CACHE_TTL_S = 86400;
